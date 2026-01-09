@@ -1,15 +1,17 @@
-import { View, Text, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, useColorScheme } from 'react-native';
+import { View, Text, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
 import { Link, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Colors, Fonts } from '@/constants/theme';
 
 export default function RegisterScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark, colorScheme } = useTheme();
+  const colors = Colors[colorScheme];
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={[styles.container, { backgroundColor: isDark ? '#111827' : '#1D1D1D' }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
     >
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <ScrollView
@@ -20,23 +22,23 @@ export default function RegisterScreen() {
         <View style={styles.contentWrapper}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={[styles.title, { color: isDark ? '#1D1D1D' : '#111827' }]}>
+            <Text style={[styles.title, { color: colors.text, fontFamily: Fonts.bold }]}>
               Registration Restricted
             </Text>
-            <Text style={[styles.subtitle, { color: isDark ? '#9CA3AF' : '#4B5563' }]}>
+            <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: Fonts.light }]}>
               Only administrators can register new users
             </Text>
           </View>
 
           {/* Info Card */}
-          <View style={[styles.infoCard, { backgroundColor: isDark ? '#1F2937' : '#F3F4F6' }]}>
-            <Text style={[styles.infoText, { color: isDark ? '#D1D5DB' : '#374151' }]}>
+          <View style={[styles.infoCard, { backgroundColor: colors.cardBackground }]}>
+            <Text style={[styles.infoText, { color: colors.textSecondary, fontFamily: Fonts.regular }]}>
               User registration is restricted to administrators only.
             </Text>
-            <Text style={[styles.infoText, { color: isDark ? '#D1D5DB' : '#374151', marginTop: 12 }]}>
+            <Text style={[styles.infoText, { color: colors.textSecondary, fontFamily: Fonts.regular, marginTop: 12 }]}>
               If you need an account, please contact an administrator.
             </Text>
-            <Text style={[styles.infoText, { color: isDark ? '#D1D5DB' : '#374151', marginTop: 12 }]}>
+            <Text style={[styles.infoText, { color: colors.textSecondary, fontFamily: Fonts.regular, marginTop: 12 }]}>
               Administrators can register new users from the dashboard after logging in.
             </Text>
           </View>
@@ -45,10 +47,10 @@ export default function RegisterScreen() {
           <View style={styles.loginContainer}>
             <Link href="/login" asChild>
               <TouchableOpacity 
-                style={[styles.loginButton, { backgroundColor: isDark ? '#3B82F6' : '#2563EB' }]}
+                style={[styles.loginButton, { backgroundColor: colors.primary }]}
                 activeOpacity={0.8}
               >
-                <Text style={styles.loginButtonText}>
+                <Text style={[styles.loginButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>
                   Go to Login
                 </Text>
               </TouchableOpacity>
@@ -83,13 +85,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
+    fontSize: Fonts.sizes['2xl'],
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: Fonts.sizes.base,
     textAlign: 'center',
   },
   infoCard: {
@@ -98,7 +99,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   infoText: {
-    fontSize: 16,
+    fontSize: Fonts.sizes.base,
     lineHeight: 24,
   },
   loginContainer: {
@@ -112,8 +113,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loginButtonText: {
-    color: '#1D1D1D',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: Fonts.sizes.base,
   },
 });

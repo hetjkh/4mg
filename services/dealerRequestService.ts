@@ -20,6 +20,15 @@ export interface DealerRequest {
   };
   strips: number;
   status: 'pending' | 'approved' | 'cancelled';
+  paymentStatus: 'pending' | 'paid' | 'verified' | 'rejected';
+  receiptImage?: string | null;
+  paymentVerifiedBy?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+  paymentVerifiedAt?: string | null;
+  paymentNotes?: string;
   requestedAt: string;
   processedBy?: {
     id: string;
@@ -290,6 +299,198 @@ export const getDealerStats = async (dealerId: string): Promise<DealerStats> => 
     return data.data;
   } catch (error: any) {
     console.error('Get dealer stats error:', error);
+    if (error.message?.includes('Network request failed') || error.message?.includes('Failed to fetch')) {
+      throw new Error('Cannot connect to server. Please check your connection.');
+    }
+    throw error;
+  }
+};
+
+// Get UPI ID
+export const getUpiId = async (): Promise<string> => {
+  try {
+    const token = await getToken();
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.DEALER_REQUESTS}/upi-id`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to fetch UPI ID');
+    }
+
+    return data.data.upiId;
+  } catch (error: any) {
+    console.error('Get UPI ID error:', error);
+    if (error.message?.includes('Network request failed') || error.message?.includes('Failed to fetch')) {
+      throw new Error('Cannot connect to server. Please check your connection.');
+    }
+    throw error;
+  }
+};
+
+// Update UPI ID (Admin only)
+export const updateUpiId = async (upiId: string): Promise<{ success: boolean; message: string; data: { upiId: string } }> => {
+  try {
+    const token = await getToken();
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.DEALER_REQUESTS}/upi-id`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ upiId }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to update UPI ID');
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error('Update UPI ID error:', error);
+    if (error.message?.includes('Network request failed') || error.message?.includes('Failed to fetch')) {
+      throw new Error('Cannot connect to server. Please check your connection.');
+    }
+    throw error;
+  }
+};
+
+// Upload Payment Receipt (Dealer only)
+export const uploadReceipt = async (
+  requestId: string,
+  receiptUri: string
+): Promise<DealerRequestResponse> => {
+  try {
+    if (!requestId || requestId === 'undefined' || requestId.trim() === '') {
+      throw new Error('Invalid request ID. Please try again.');
+    }
+
+    const token = await getToken();
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    // Create FormData for file upload
+    const formData = new FormData();
+    
+    // Extract filename from URI
+    const filename = receiptUri.split('/').pop() || 'receipt.jpg';
+    const match = /\.(\w+)$/.exec(filename);
+    const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+    // Add file to FormData
+    formData.append('receipt', {
+      uri: receiptUri,
+      name: filename,
+      type: type,
+    } as any);
+
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.DEALER_REQUESTS}/${requestId}/upload-receipt`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        // Don't set Content-Type, let FormData set it with boundary
+      },
+      body: formData,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to upload receipt');
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error('Upload receipt error:', error);
+    if (error.message?.includes('Network request failed') || error.message?.includes('Failed to fetch')) {
+      throw new Error('Cannot connect to server. Please check your connection.');
+    }
+    throw error;
+  }
+};
+
+// Verify Payment (Admin only)
+export const verifyPayment = async (
+  requestId: string,
+  notes?: string
+): Promise<DealerRequestResponse> => {
+  try {
+    const token = await getToken();
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.DEALER_REQUESTS}/${requestId}/verify-payment`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ notes }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to verify payment');
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error('Verify payment error:', error);
+    if (error.message?.includes('Network request failed') || error.message?.includes('Failed to fetch')) {
+      throw new Error('Cannot connect to server. Please check your connection.');
+    }
+    throw error;
+  }
+};
+
+// Reject Payment (Admin only)
+export const rejectPayment = async (
+  requestId: string,
+  notes?: string
+): Promise<DealerRequestResponse> => {
+  try {
+    const token = await getToken();
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.DEALER_REQUESTS}/${requestId}/reject-payment`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ notes }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to reject payment');
+    }
+
+    return data;
+  } catch (error: any) {
+    console.error('Reject payment error:', error);
     if (error.message?.includes('Network request failed') || error.message?.includes('Failed to fetch')) {
       throw new Error('Cannot connect to server. Please check your connection.');
     }

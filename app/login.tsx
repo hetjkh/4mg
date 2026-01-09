@@ -1,20 +1,22 @@
 import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, useColorScheme, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { Link, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { login } from '@/services/authService';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Colors, Fonts } from '@/constants/theme';
 
 type UserRole = 'admin' | 'stalkist' | 'dellear' | 'salesman';
 
 export default function LoginScreen() {
+  const { isDark, colorScheme } = useTheme();
+  const colors = Colors[colorScheme];
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>('salesman');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showRolePicker, setShowRolePicker] = useState(false);
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
 
   const roles: { label: string; value: UserRole }[] = [
     { label: 'Admin', value: 'admin' },
@@ -55,9 +57,9 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
     >
-      <StatusBar style="light" />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -66,18 +68,18 @@ export default function LoginScreen() {
         <View style={styles.contentWrapper}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>
+            <Text style={[styles.title, { color: colors.text, fontFamily: Fonts.bold }]}>
               Welcome Back
             </Text>
-            <Text style={styles.subtitle}>
+            <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: Fonts.light }]}>
               Sign in to continue
             </Text>
           </View>
 
           {/* Error Message */}
           {error ? (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>
+            <View style={[styles.errorContainer, { backgroundColor: `${colors.error}20` }]}>
+              <Text style={[styles.errorText, { color: colors.error, fontFamily: Fonts.light }]}>
                 {error}
               </Text>
             </View>
@@ -87,20 +89,21 @@ export default function LoginScreen() {
           <View style={styles.form}>
             {/* Email Input */}
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>
+              <Text style={[styles.label, { color: colors.textSecondary, fontFamily: Fonts.medium }]}>
                 Email
               </Text>
               <TextInput
                 style={[
                   styles.input,
                   {
-                    backgroundColor: '#D1D5DB',
-                    borderColor: '#9CA3AF',
-                    color: '#111827',
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.inputBorder,
+                    color: colors.inputText,
+                    fontFamily: Fonts.regular,
                   },
                 ]}
                 placeholder="Enter your email"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.inputPlaceholder}
                 value={email}
                 onChangeText={(text) => {
                   setEmail(text);
@@ -115,20 +118,21 @@ export default function LoginScreen() {
 
             {/* Password Input */}
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>
+              <Text style={[styles.label, { color: colors.textSecondary, fontFamily: Fonts.medium }]}>
                 Password
               </Text>
               <TextInput
                 style={[
                   styles.input,
                   {
-                    backgroundColor: '#D1D5DB',
-                    borderColor: '#9CA3AF',
-                    color: '#111827',
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.inputBorder,
+                    color: colors.inputText,
+                    fontFamily: Fonts.regular,
                   },
                 ]}
                 placeholder="Enter your password"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.inputPlaceholder}
                 value={password}
                 onChangeText={(text) => {
                   setPassword(text);
@@ -143,7 +147,7 @@ export default function LoginScreen() {
 
             {/* Role Selection */}
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>
+              <Text style={[styles.label, { color: colors.textSecondary, fontFamily: Fonts.medium }]}>
                 Role
               </Text>
               <View style={styles.roleContainer}>
@@ -158,11 +162,11 @@ export default function LoginScreen() {
                       styles.roleButton,
                       {
                         backgroundColor: role === roleOption.value
-                          ? '#3B82F6'
-                          : '#D1D5DB',
+                          ? colors.primary
+                          : colors.inputBackground,
                         borderColor: role === roleOption.value
-                          ? '#60A5FA'
-                          : '#9CA3AF',
+                          ? colors.primaryLight
+                          : colors.inputBorder,
                       },
                     ]}
                     disabled={loading}
@@ -172,8 +176,9 @@ export default function LoginScreen() {
                         styles.roleButtonText,
                         {
                           color: role === roleOption.value
-                            ? '#1D1D1D'
-                            : '#111827',
+                            ? colors.textInverse
+                            : colors.inputText,
+                          fontFamily: Fonts.semiBold,
                         },
                       ]}
                     >
@@ -186,7 +191,7 @@ export default function LoginScreen() {
 
             {/* Forgot Password */}
             <TouchableOpacity style={styles.forgotPassword} disabled={loading}>
-              <Text style={styles.forgotPasswordText}>
+              <Text style={[styles.forgotPasswordText, { color: colors.primaryLight, fontFamily: Fonts.medium }]}>
                 Forgot Password?
               </Text>
             </TouchableOpacity>
@@ -198,7 +203,7 @@ export default function LoginScreen() {
             style={[
               styles.loginButton, 
               { 
-                backgroundColor: '#3B82F6',
+                backgroundColor: colors.primary,
                 opacity: loading ? 0.6 : 1,
               }
             ]}
@@ -206,9 +211,9 @@ export default function LoginScreen() {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#1D1D1D" />
+              <ActivityIndicator color={colors.textInverse} />
             ) : (
-              <Text style={styles.loginButtonText}>
+              <Text style={[styles.loginButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>
                 Sign In
               </Text>
             )}
@@ -216,19 +221,19 @@ export default function LoginScreen() {
 
           {/* Divider */}
           <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR</Text>
-            <View style={styles.dividerLine} />
+            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+            <Text style={[styles.dividerText, { color: colors.textTertiary, fontFamily: Fonts.light }]}>OR</Text>
+            <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
           </View>
 
           {/* Register Link */}
           <View style={styles.registerContainer}>
-            <Text style={styles.registerText}>
+            <Text style={[styles.registerText, { color: colors.textTertiary, fontFamily: Fonts.light }]}>
               Don't have an account?{' '}
             </Text>
             <Link href="/register" asChild>
               <TouchableOpacity>
-                <Text style={styles.registerLink}>
+                <Text style={[styles.registerLink, { color: colors.primaryLight, fontFamily: Fonts.semiBold }]}>
                   Sign Up
                 </Text>
               </TouchableOpacity>
@@ -243,7 +248,6 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
   },
   scrollView: {
     flex: 1,
@@ -263,15 +267,11 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   title: {
-    fontSize: 36,
-    fontFamily: 'Poppins-Bold',
-    color: '#1D1D1D',
+    fontSize: Fonts.sizes['4xl'],
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
-    fontFamily: 'Poppins-Light',
-    color: '#9CA3AF',
+    fontSize: Fonts.sizes.base,
   },
   form: {
     marginBottom: 24,
@@ -280,9 +280,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   label: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Medium',
-    color: '#D1D5DB',
+    fontSize: Fonts.sizes.sm,
     marginBottom: 8,
   },
   input: {
@@ -291,16 +289,14 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderWidth: 1,
     borderRadius: 8,
-    fontSize: 16,
+    fontSize: Fonts.sizes.base,
   },
   forgotPassword: {
     alignSelf: 'flex-end',
     marginTop: 4,
   },
   forgotPasswordText: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Medium',
-    color: '#60A5FA',
+    fontSize: Fonts.sizes.sm,
   },
   loginButton: {
     width: '100%',
@@ -319,9 +315,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   loginButtonText: {
-    color: '#1D1D1D',
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: Fonts.sizes.base,
   },
   divider: {
     flexDirection: 'row',
@@ -331,13 +325,10 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#374151',
   },
   dividerText: {
     paddingHorizontal: 16,
-    fontSize: 14,
-    fontFamily: 'Poppins-Light',
-    color: '#9CA3AF',
+    fontSize: Fonts.sizes.sm,
   },
   registerContainer: {
     flexDirection: 'row',
@@ -345,26 +336,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   registerText: {
-    fontSize: 16,
-    fontFamily: 'Poppins-Light',
-    color: '#9CA3AF',
+    fontSize: Fonts.sizes.base,
   },
   registerLink: {
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#60A5FA',
+    fontSize: Fonts.sizes.base,
   },
   errorContainer: {
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
-    backgroundColor: '#FEE2E2',
   },
   errorText: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Light',
+    fontSize: Fonts.sizes.sm,
     textAlign: 'center',
-    color: '#DC2626',
   },
   roleContainer: {
     flexDirection: 'row',
@@ -383,8 +367,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   roleButtonText: {
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: Fonts.sizes.sm,
   },
 });
 

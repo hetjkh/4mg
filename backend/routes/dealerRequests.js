@@ -1,10 +1,30 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 const DealerRequest = require('../models/DealerRequest');
 const Product = require('../models/Product');
 const User = require('../models/User');
+const AdminSettings = require('../models/AdminSettings');
+const multer = require('multer');
+const cloudinary = require('../config/cloudinary');
 
 const router = express.Router();
+
+// Configure multer for receipt uploads
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'), false);
+    }
+  },
+});
 
 // Middleware to verify token and get user
 const verifyToken = async (req, res, next) => {
@@ -119,10 +139,25 @@ router.post('/', verifyToken, verifyDealer, async (req, res) => {
     await request.populate('product', 'title packetPrice packetsPerStrip image');
     await request.populate('dealer', 'name email');
 
+    // Transform request to ensure all IDs are properly mapped
+    const requestObj = request.toObject ? request.toObject() : request;
+    const transformedRequest = {
+      ...requestObj,
+      id: requestObj._id || requestObj.id,
+      dealer: requestObj.dealer ? {
+        ...requestObj.dealer,
+        id: requestObj.dealer._id || requestObj.dealer.id,
+      } : requestObj.dealer,
+      product: requestObj.product ? {
+        ...requestObj.product,
+        id: requestObj.product._id || requestObj.product.id,
+      } : requestObj.product,
+    };
+
     res.status(201).json({
       success: true,
       message: 'Request created successfully',
-      data: { request },
+      data: { request: transformedRequest },
     });
   } catch (error) {
     console.error('Create dealer request error:', error);
@@ -134,25 +169,55 @@ router.post('/', verifyToken, verifyDealer, async (req, res) => {
   }
 });
 
-// Get All Requests (Admin - all requests, Dealer - own requests)
+// Get All Requests (Admin - all requests, Dealer - own requests, Stalkist - dealers they created)
 router.get('/', verifyToken, async (req, res) => {
   try {
     let query = {};
     
-    // Dealers can only see their own requests
     if (req.user.role === 'dealer' || req.user.role === 'dellear') {
       query.dealer = req.user._id;
+    } else if (req.user.role === 'stalkist') {
+      // Stalkists can see requests from dealers they created
+      const dealersCreatedByStalkist = await User.find({ createdBy: req.user._id, role: { $in: ['dealer', 'dellear'] } }).select('_id');
+      const dealerIds = dealersCreatedByStalkist.map(dealer => dealer._id);
+      query.dealer = { $in: dealerIds };
     }
 
     const requests = await DealerRequest.find(query)
       .populate('product', 'title packetPrice packetsPerStrip image stock')
       .populate('dealer', 'name email')
       .populate('processedBy', 'name email')
+      .populate('paymentVerifiedBy', 'name email')
       .sort({ createdAt: -1 });
+
+    // Transform requests to ensure all IDs are properly mapped
+    const transformedRequests = requests.map(request => {
+      const requestObj = request.toObject ? request.toObject() : request;
+      return {
+        ...requestObj,
+        id: requestObj._id || requestObj.id,
+        dealer: requestObj.dealer ? {
+          ...requestObj.dealer,
+          id: requestObj.dealer._id || requestObj.dealer.id,
+        } : requestObj.dealer,
+        product: requestObj.product ? {
+          ...requestObj.product,
+          id: requestObj.product._id || requestObj.product.id,
+        } : requestObj.product,
+        processedBy: requestObj.processedBy ? {
+          ...requestObj.processedBy,
+          id: requestObj.processedBy._id || requestObj.processedBy.id,
+        } : requestObj.processedBy,
+        paymentVerifiedBy: requestObj.paymentVerifiedBy ? {
+          ...requestObj.paymentVerifiedBy,
+          id: requestObj.paymentVerifiedBy._id || requestObj.paymentVerifiedBy.id,
+        } : requestObj.paymentVerifiedBy,
+      };
+    });
 
     res.json({
       success: true,
-      data: { requests },
+      data: { requests: transformedRequests },
     });
   } catch (error) {
     console.error('Get dealer requests error:', error);
@@ -164,13 +229,74 @@ router.get('/', verifyToken, async (req, res) => {
   }
 });
 
+// Get UPI ID (Dealer/Admin - dealers see it, admin can manage it)
+// IMPORTANT: This route must come BEFORE /:id route to avoid route conflicts
+router.get('/upi-id', verifyToken, async (req, res) => {
+  try {
+    const settings = await AdminSettings.getSettings();
+    res.json({
+      success: true,
+      data: { upiId: settings.upiId },
+    });
+  } catch (error) {
+    console.error('Get UPI ID error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error while fetching UPI ID',
+      error: error.message 
+    });
+  }
+});
+
+// Update UPI ID (Admin only)
+// IMPORTANT: This route must come BEFORE /:id route to avoid route conflicts
+router.put('/upi-id', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    const { upiId } = req.body;
+
+    if (!upiId || typeof upiId !== 'string' || upiId.trim() === '') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Please provide a valid UPI ID' 
+      });
+    }
+
+    const settings = await AdminSettings.getSettings();
+    settings.upiId = upiId.trim();
+    settings.updatedBy = req.user._id;
+    await settings.save();
+
+    res.json({
+      success: true,
+      message: 'UPI ID updated successfully',
+      data: { upiId: settings.upiId },
+    });
+  } catch (error) {
+    console.error('Update UPI ID error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error while updating UPI ID',
+      error: error.message 
+    });
+  }
+});
+
 // Get Single Request
 router.get('/:id', verifyToken, async (req, res) => {
   try {
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid request ID format' 
+      });
+    }
+
     const request = await DealerRequest.findById(req.params.id)
       .populate('product', 'title packetPrice packetsPerStrip image stock')
       .populate('dealer', 'name email')
-      .populate('processedBy', 'name email');
+      .populate('processedBy', 'name email')
+      .populate('paymentVerifiedBy', 'name email');
 
     if (!request) {
       return res.status(404).json({ 
@@ -188,9 +314,32 @@ router.get('/:id', verifyToken, async (req, res) => {
       });
     }
 
+    // Transform request to ensure all IDs are properly mapped
+    const requestObj = request.toObject ? request.toObject() : request;
+    const transformedRequest = {
+      ...requestObj,
+      id: requestObj._id || requestObj.id,
+      dealer: requestObj.dealer ? {
+        ...requestObj.dealer,
+        id: requestObj.dealer._id || requestObj.dealer.id,
+      } : requestObj.dealer,
+      product: requestObj.product ? {
+        ...requestObj.product,
+        id: requestObj.product._id || requestObj.product.id,
+      } : requestObj.product,
+      processedBy: requestObj.processedBy ? {
+        ...requestObj.processedBy,
+        id: requestObj.processedBy._id || requestObj.processedBy.id,
+      } : requestObj.processedBy,
+      paymentVerifiedBy: requestObj.paymentVerifiedBy ? {
+        ...requestObj.paymentVerifiedBy,
+        id: requestObj.paymentVerifiedBy._id || requestObj.paymentVerifiedBy.id,
+      } : requestObj.paymentVerifiedBy,
+    };
+
     res.json({
       success: true,
-      data: { request },
+      data: { request: transformedRequest },
     });
   } catch (error) {
     console.error('Get dealer request error:', error);
@@ -202,9 +351,202 @@ router.get('/:id', verifyToken, async (req, res) => {
   }
 });
 
-// Approve Request (Admin only)
+// Upload Payment Receipt (Dealer only)
+router.put('/:id/upload-receipt', verifyToken, verifyDealer, upload.single('receipt'), async (req, res) => {
+  try {
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid request ID format' 
+      });
+    }
+
+    const request = await DealerRequest.findById(req.params.id);
+
+    if (!request) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Request not found' 
+      });
+    }
+
+    // Verify dealer owns this request
+    if (request.dealer.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Access denied. You can only upload receipts for your own requests.' 
+      });
+    }
+
+    if (request.status !== 'pending') {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Cannot upload receipt for ${request.status} request` 
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No receipt image provided',
+      });
+    }
+
+    // Upload receipt to Cloudinary
+    const base64Image = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+    const result = await cloudinary.uploader.upload(base64Image, {
+      folder: 'receipts', // Organize receipts in a separate folder
+      resource_type: 'image',
+      transformation: [
+        { width: 1200, height: 1600, crop: 'limit' }, // Resize for receipts
+        { quality: 'auto' },
+      ],
+    });
+
+    // Update request with receipt
+    request.receiptImage = result.secure_url;
+    request.paymentStatus = 'paid'; // Changed from 'pending' to 'paid'
+    await request.save();
+
+    await request.populate('product', 'title packetPrice packetsPerStrip image');
+    await request.populate('dealer', 'name email');
+
+    res.json({
+      success: true,
+      message: 'Receipt uploaded successfully. Waiting for admin verification.',
+      data: { request },
+    });
+  } catch (error) {
+    console.error('Upload receipt error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message || 'Server error during receipt upload',
+      error: error.message 
+    });
+  }
+});
+
+// Verify Payment (Admin only - approve the payment)
+router.put('/:id/verify-payment', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid request ID format' 
+      });
+    }
+
+    const request = await DealerRequest.findById(req.params.id)
+      .populate('product');
+
+    if (!request) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Request not found' 
+      });
+    }
+
+    if (request.paymentStatus !== 'paid') {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Payment status is ${request.paymentStatus}. Only 'paid' receipts can be verified.` 
+      });
+    }
+
+    // Verify payment
+    request.paymentStatus = 'verified';
+    request.paymentVerifiedBy = req.user._id;
+    request.paymentVerifiedAt = new Date();
+    request.paymentNotes = req.body.notes || '';
+    await request.save();
+
+    await request.populate('product', 'title packetPrice packetsPerStrip image');
+    await request.populate('dealer', 'name email');
+    await request.populate('paymentVerifiedBy', 'name email');
+
+    res.json({
+      success: true,
+      message: 'Payment verified successfully. You can now approve the request.',
+      data: { request },
+    });
+  } catch (error) {
+    console.error('Verify payment error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message || 'Server error during payment verification',
+      error: error.message 
+    });
+  }
+});
+
+// Reject Payment (Admin only - reject the receipt)
+router.put('/:id/reject-payment', verifyToken, verifyAdmin, async (req, res) => {
+  try {
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid request ID format' 
+      });
+    }
+
+    const request = await DealerRequest.findById(req.params.id);
+
+    if (!request) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Request not found' 
+      });
+    }
+
+    if (request.paymentStatus !== 'paid') {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Payment status is ${request.paymentStatus}. Only 'paid' receipts can be rejected.` 
+      });
+    }
+
+    // Reject payment - dealer can upload new receipt
+    request.paymentStatus = 'rejected';
+    request.paymentVerifiedBy = req.user._id;
+    request.paymentVerifiedAt = new Date();
+    request.paymentNotes = req.body.notes || 'Receipt rejected. Please upload a valid receipt.';
+    // Clear receipt image so dealer can upload a new one
+    request.receiptImage = null;
+    await request.save();
+
+    await request.populate('product', 'title packetPrice packetsPerStrip image');
+    await request.populate('dealer', 'name email');
+    await request.populate('paymentVerifiedBy', 'name email');
+
+    res.json({
+      success: true,
+      message: 'Payment rejected. Dealer can upload a new receipt.',
+      data: { request },
+    });
+  } catch (error) {
+    console.error('Reject payment error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message || 'Server error during payment rejection',
+      error: error.message 
+    });
+  }
+});
+
+// Approve Request (Admin only - only after payment is verified)
 router.put('/:id/approve', verifyToken, verifyAdmin, async (req, res) => {
   try {
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid request ID format' 
+      });
+    }
+
     const request = await DealerRequest.findById(req.params.id)
       .populate('product');
 
@@ -219,6 +561,14 @@ router.put('/:id/approve', verifyToken, verifyAdmin, async (req, res) => {
       return res.status(400).json({ 
         success: false, 
         message: `Request is already ${request.status}` 
+      });
+    }
+
+    // Check if payment is verified
+    if (request.paymentStatus !== 'verified') {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Cannot approve request. Payment status is ${request.paymentStatus}. Payment must be verified first.` 
       });
     }
 
@@ -244,6 +594,7 @@ router.put('/:id/approve', verifyToken, verifyAdmin, async (req, res) => {
     await request.populate('product', 'title packetPrice packetsPerStrip image');
     await request.populate('dealer', 'name email');
     await request.populate('processedBy', 'name email');
+    await request.populate('paymentVerifiedBy', 'name email');
 
     res.json({
       success: true,
@@ -263,6 +614,14 @@ router.put('/:id/approve', verifyToken, verifyAdmin, async (req, res) => {
 // Cancel Request (Admin only)
 router.put('/:id/cancel', verifyToken, verifyAdmin, async (req, res) => {
   try {
+    // Validate ObjectId format
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid request ID format' 
+      });
+    }
+
     const request = await DealerRequest.findById(req.params.id);
 
     if (!request) {

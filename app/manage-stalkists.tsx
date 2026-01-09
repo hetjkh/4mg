@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react';
 import * as React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, useColorScheme, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { getStalkists, Stalkist, getStalkistStats } from '@/services/stalkistService';
 import { getUser, User } from '@/services/authService';
 import { deleteStalkist } from '@/services/adminUserService';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Colors, Fonts } from '@/constants/theme';
 
 export default function ManageStalkistsScreen() {
   const [stalkists, setStalkists] = useState<Stalkist[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark, colorScheme } = useTheme();
+  const colors = Colors[colorScheme];
 
   useEffect(() => {
     loadUser();
@@ -122,53 +124,53 @@ export default function ManageStalkistsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <StatusBar style="light" />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <StatusBar style={isDark ? 'light' : 'dark'} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#60A5FA" />
-          <Text style={styles.loadingText}>Loading stalkists...</Text>
+          <ActivityIndicator size="large" color={colors.primaryLight} />
+          <Text style={[styles.loadingText, { color: colors.textSecondary, fontFamily: Fonts.light }]}>Loading stalkists...</Text>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
+          <Text style={[styles.backButtonText, { color: colors.primaryLight, fontFamily: Fonts.semiBold }]}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Manage Stalkists</Text>
+        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: Fonts.bold }]}>Manage Stalkists</Text>
         <View style={{ width: 60 }} />
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView style={[styles.scrollView, { backgroundColor: colors.background }]} contentContainerStyle={styles.scrollContent}>
         <View style={styles.stalkistsContainer}>
-          <Text style={styles.sectionTitle}>
+          <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: Fonts.bold }]}>
             All Stalkists ({stalkists.length})
           </Text>
 
           {stalkists.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
+              <Text style={[styles.emptyText, { color: colors.textTertiary, fontFamily: Fonts.light }]}>
                 No stalkists found.
               </Text>
             </View>
           ) : (
             stalkists.map((stalkist) => (
-              <View key={stalkist.id} style={styles.stalkistCard}>
+              <View key={stalkist.id} style={[styles.stalkistCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                 <View style={styles.stalkistInfo}>
                   <View style={styles.stalkistHeader}>
-                    <Text style={styles.stalkistName}>{stalkist.name}</Text>
-                    <View style={styles.roleBadge}>
-                      <Text style={styles.roleText}>STALKIST</Text>
+                    <Text style={[styles.stalkistName, { color: colors.text, fontFamily: Fonts.bold }]}>{stalkist.name}</Text>
+                    <View style={[styles.roleBadge, { backgroundColor: colors.roleStalkist }]}>
+                      <Text style={[styles.roleText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>STALKIST</Text>
                     </View>
                   </View>
-                  <Text style={styles.stalkistEmail}>{stalkist.email}</Text>
+                  <Text style={[styles.stalkistEmail, { color: colors.textSecondary, fontFamily: Fonts.light }]}>{stalkist.email}</Text>
                   {stalkist.createdAt && (
-                    <Text style={styles.stalkistDate}>
+                    <Text style={[styles.stalkistDate, { color: colors.textTertiary, fontFamily: Fonts.light }]}>
                       Created: {new Date(stalkist.createdAt).toLocaleDateString()}
                     </Text>
                   )}
@@ -176,17 +178,17 @@ export default function ManageStalkistsScreen() {
 
                 <View style={styles.stalkistActions}>
                   <TouchableOpacity
-                    style={styles.viewDetailsButton}
+                    style={[styles.viewDetailsButton, { backgroundColor: colors.success }]}
                     onPress={() => router.push(`/stalkist-detail/${stalkist.id}`)}
                   >
-                    <Text style={styles.viewDetailsButtonText}>View Details</Text>
+                    <Text style={[styles.viewDetailsButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>View Details</Text>
                   </TouchableOpacity>
                   
                   <TouchableOpacity
-                    style={styles.deleteButton}
+                    style={[styles.deleteButton, { backgroundColor: colors.error }]}
                     onPress={() => handleDeleteStalkist(stalkist)}
                   >
-                    <Text style={styles.deleteButtonText}>Delete</Text>
+                    <Text style={[styles.deleteButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>Delete</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -201,19 +203,15 @@ export default function ManageStalkistsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000000',
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 16,
-    fontFamily: 'Poppins-Light',
-    color: '#FFFFFF',
+    fontSize: Fonts.sizes.base,
   },
   header: {
     flexDirection: 'row',
@@ -222,27 +220,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#1F1F1F',
-    backgroundColor: '#000000',
   },
   backButton: {
     padding: 8,
   },
   backButtonText: {
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#60A5FA',
+    fontSize: Fonts.sizes.base,
   },
   headerTitle: {
-    fontSize: 20,
-    fontFamily: 'Poppins-Bold',
-    color: '#FFFFFF',
+    fontSize: Fonts.sizes.xl,
     flex: 1,
     textAlign: 'center',
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#000000',
   },
   scrollContent: {
     padding: 16,
@@ -251,9 +242,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontFamily: 'Poppins-Bold',
-    color: '#FFFFFF',
+    fontSize: Fonts.sizes.lg,
     marginBottom: 12,
   },
   emptyContainer: {
@@ -261,17 +250,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 16,
-    fontFamily: 'Poppins-Light',
+    fontSize: Fonts.sizes.base,
     textAlign: 'center',
-    color: '#9CA3AF',
   },
   stalkistCard: {
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    backgroundColor: '#1D1D1D',
-    borderColor: '#374151',
     marginBottom: 12,
   },
   stalkistInfo: {
@@ -284,32 +269,23 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   stalkistName: {
-    fontSize: 18,
-    fontFamily: 'Poppins-Bold',
-    color: '#FFFFFF',
+    fontSize: Fonts.sizes.lg,
     flex: 1,
   },
   roleBadge: {
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 6,
-    backgroundColor: '#059669',
   },
   roleText: {
-    fontSize: 10,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#FFFFFF',
+    fontSize: Fonts.sizes.xs,
   },
   stalkistEmail: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Light',
-    color: '#D1D5DB',
+    fontSize: Fonts.sizes.sm,
     marginBottom: 4,
   },
   stalkistDate: {
-    fontSize: 12,
-    fontFamily: 'Poppins-Light',
-    color: '#9CA3AF',
+    fontSize: Fonts.sizes.xs,
   },
   stalkistActions: {
     flexDirection: 'row',
@@ -321,26 +297,20 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#10B981',
     alignItems: 'center',
   },
   viewDetailsButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: Fonts.sizes.sm,
   },
   deleteButton: {
     flex: 1,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#DC2626',
     alignItems: 'center',
   },
   deleteButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: Fonts.sizes.sm,
   },
 });
 

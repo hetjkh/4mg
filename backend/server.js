@@ -66,6 +66,6 @@ const HOST = '0.0.0.0'; // Listen on all interfaces
 app.listen(PORT, HOST, () => {
   console.log(`Server running on http://${HOST}:${PORT}`);
   console.log(`Local access: http://localhost:${PORT}`);
-  console.log(`Network access: http://172.21.52.192:${PORT}`);
+  console.log(`Network access: http://10.228.242.192:${PORT}`);
 });
 

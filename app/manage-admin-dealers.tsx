@@ -1,19 +1,21 @@
 import { useState, useEffect } from 'react';
 import * as React from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, useColorScheme, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { getAdminDealers, AdminDealer, getDealerSalesmen } from '@/services/stalkistService';
 import { getUser, User } from '@/services/authService';
 import { deleteDealer } from '@/services/adminUserService';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Colors, Fonts } from '@/constants/theme';
 
 export default function ManageAdminDealersScreen() {
   const [dealers, setDealers] = useState<AdminDealer[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
 
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark, colorScheme } = useTheme();
+  const colors = Colors[colorScheme];
 
   useEffect(() => {
     loadUser();
@@ -121,73 +123,73 @@ export default function ManageAdminDealersScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <StatusBar style="light" />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <StatusBar style={isDark ? 'light' : 'dark'} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#60A5FA" />
-          <Text style={styles.loadingText}>Loading dealers...</Text>
+          <ActivityIndicator size="large" color={colors.primaryLight} />
+          <Text style={[styles.loadingText, { color: colors.textSecondary, fontFamily: Fonts.light }]}>Loading dealers...</Text>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
+          <Text style={[styles.backButtonText, { color: colors.primaryLight, fontFamily: Fonts.semiBold }]}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Manage Dealers</Text>
+        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: Fonts.bold }]}>Manage Dealers</Text>
         <TouchableOpacity
           onPress={() => {
             router.push('/admin-register');
           }}
-          style={styles.addButton}
+          style={[styles.addButton, { backgroundColor: colors.primary }]}
         >
-          <Text style={styles.addButtonText}>+ Add</Text>
+          <Text style={[styles.addButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>+ Add</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView style={[styles.scrollView, { backgroundColor: colors.background }]} contentContainerStyle={styles.scrollContent}>
         <View style={styles.dealersContainer}>
-          <Text style={styles.sectionTitle}>
+          <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: Fonts.bold }]}>
             All Dealers ({dealers.length})
           </Text>
 
           {dealers.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
+              <Text style={[styles.emptyText, { color: colors.textTertiary, fontFamily: Fonts.light }]}>
                 No dealers found.
               </Text>
             </View>
           ) : (
             dealers.map((dealer) => (
-              <View key={dealer.id} style={styles.dealerCard}>
+              <View key={dealer.id} style={[styles.dealerCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                 <View style={styles.dealerInfo}>
                   <View style={styles.dealerHeader}>
-                    <Text style={styles.dealerName}>{dealer.name}</Text>
-                    <View style={styles.roleBadge}>
-                      <Text style={styles.roleText}>{dealer.role.toUpperCase()}</Text>
+                    <Text style={[styles.dealerName, { color: colors.text, fontFamily: Fonts.bold }]}>{dealer.name}</Text>
+                    <View style={[styles.roleBadge, { backgroundColor: colors.roleDellear }]}>
+                      <Text style={[styles.roleText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>{dealer.role.toUpperCase()}</Text>
                     </View>
                   </View>
-                  <Text style={styles.dealerEmail}>{dealer.email}</Text>
+                  <Text style={[styles.dealerEmail, { color: colors.textSecondary, fontFamily: Fonts.light }]}>{dealer.email}</Text>
                   {dealer.createdBy ? (
-                    <View style={styles.createdByBadge}>
-                      <Text style={styles.createdByText}>
+                    <View style={[styles.createdByBadge, { backgroundColor: `${colors.roleDellear}20`, borderColor: colors.roleDellear }]}>
+                      <Text style={[styles.createdByText, { color: colors.roleDellear, fontFamily: Fonts.semiBold }]}>
                         Created by: {dealer.createdBy.name} ({dealer.createdBy.role})
                       </Text>
                     </View>
                   ) : (
-                    <View style={styles.createdByBadge}>
-                      <Text style={styles.createdByText}>
+                    <View style={[styles.createdByBadge, { backgroundColor: `${colors.roleDellear}20`, borderColor: colors.roleDellear }]}>
+                      <Text style={[styles.createdByText, { color: colors.roleDellear, fontFamily: Fonts.semiBold }]}>
                         Created by: Admin (Direct)
                       </Text>
                     </View>
                   )}
                   {dealer.createdAt && (
-                    <Text style={styles.dealerDate}>
+                    <Text style={[styles.dealerDate, { color: colors.textTertiary, fontFamily: Fonts.light }]}>
                       Created: {new Date(dealer.createdAt).toLocaleDateString()}
                     </Text>
                   )}
@@ -195,17 +197,17 @@ export default function ManageAdminDealersScreen() {
 
                 <View style={styles.dealerActions}>
                   <TouchableOpacity
-                    style={styles.viewSalesmenButton}
+                    style={[styles.viewSalesmenButton, { backgroundColor: colors.success }]}
                     onPress={() => router.push(`/dealer-salesmen/${dealer.id}?admin=true`)}
                   >
-                    <Text style={styles.viewSalesmenButtonText}>View Salesmen</Text>
+                    <Text style={[styles.viewSalesmenButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>View Salesmen</Text>
                   </TouchableOpacity>
                   
                   <TouchableOpacity
-                    style={styles.deleteButton}
+                    style={[styles.deleteButton, { backgroundColor: colors.error }]}
                     onPress={() => handleDeleteDealer(dealer)}
                   >
-                    <Text style={styles.deleteButtonText}>Delete</Text>
+                    <Text style={[styles.deleteButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>Delete</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -220,19 +222,15 @@ export default function ManageAdminDealersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000000',
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 16,
-    fontFamily: 'Poppins-Light',
-    color: '#FFFFFF',
+    fontSize: Fonts.sizes.base,
   },
   header: {
     flexDirection: 'row',
@@ -241,21 +239,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#1F1F1F',
-    backgroundColor: '#000000',
   },
   backButton: {
     padding: 8,
   },
   backButtonText: {
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#60A5FA',
+    fontSize: Fonts.sizes.base,
   },
   headerTitle: {
-    fontSize: 20,
-    fontFamily: 'Poppins-Bold',
-    color: '#FFFFFF',
+    fontSize: Fonts.sizes.xl,
     flex: 1,
     textAlign: 'center',
   },
@@ -263,16 +255,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#3B82F6',
   },
   addButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: Fonts.sizes.sm,
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#000000',
   },
   scrollContent: {
     padding: 16,
@@ -281,9 +269,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontFamily: 'Poppins-Bold',
-    color: '#FFFFFF',
+    fontSize: Fonts.sizes.lg,
     marginBottom: 12,
   },
   emptyContainer: {
@@ -291,17 +277,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 16,
-    fontFamily: 'Poppins-Light',
+    fontSize: Fonts.sizes.base,
     textAlign: 'center',
-    color: '#9CA3AF',
   },
   dealerCard: {
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    backgroundColor: '#1D1D1D',
-    borderColor: '#374151',
     marginBottom: 12,
   },
   dealerInfo: {
@@ -314,26 +296,19 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   dealerName: {
-    fontSize: 18,
-    fontFamily: 'Poppins-Bold',
-    color: '#FFFFFF',
+    fontSize: Fonts.sizes.lg,
     flex: 1,
   },
   roleBadge: {
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 6,
-    backgroundColor: '#2563EB',
   },
   roleText: {
-    fontSize: 10,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#FFFFFF',
+    fontSize: Fonts.sizes.xs,
   },
   dealerEmail: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Light',
-    color: '#D1D5DB',
+    fontSize: Fonts.sizes.sm,
     marginBottom: 8,
   },
   createdByBadge: {
@@ -341,20 +316,14 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 6,
-    backgroundColor: '#7C3AED20',
     borderWidth: 1,
-    borderColor: '#7C3AED',
     marginBottom: 8,
   },
   createdByText: {
-    fontSize: 12,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#7C3AED',
+    fontSize: Fonts.sizes.xs,
   },
   dealerDate: {
-    fontSize: 12,
-    fontFamily: 'Poppins-Light',
-    color: '#9CA3AF',
+    fontSize: Fonts.sizes.xs,
   },
   dealerActions: {
     flexDirection: 'row',
@@ -366,26 +335,20 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#10B981',
     alignItems: 'center',
   },
   viewSalesmenButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: Fonts.sizes.sm,
   },
   deleteButton: {
     flex: 1,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#DC2626',
     alignItems: 'center',
   },
   deleteButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: Fonts.sizes.sm,
   },
 });
 

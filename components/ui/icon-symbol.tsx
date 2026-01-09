@@ -23,6 +23,13 @@ const MAPPING = {
   'person.fill': 'person',
   'arrow.right.square': 'exit-to-app',
   'cube': 'inventory',
+  'sun.max': 'wb-sunny',
+  'moon': 'nightlight-round',
+  'list.bullet': 'list',
+  'list.bullet.rectangle.portrait': 'list-alt',
+  'person.3': 'groups',
+  'person.2': 'people',
+  'cart': 'shopping-cart',
 } as IconMapping;
 
 /**

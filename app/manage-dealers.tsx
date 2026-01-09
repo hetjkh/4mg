@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import * as React from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, useColorScheme, Alert, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator, Modal } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { getDealers, updateDealer, deleteDealer, Dealer } from '@/services/dealerService';
 import { getUser, User } from '@/services/authService';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Colors, Fonts } from '@/constants/theme';
 
 export default function ManageDealersScreen() {
   const [dealers, setDealers] = useState<Dealer[]>([]);
@@ -20,8 +22,8 @@ export default function ManageDealersScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark, colorScheme } = useTheme();
+  const colors = Colors[colorScheme];
 
   useEffect(() => {
     loadUser();
@@ -157,62 +159,62 @@ export default function ManageDealersScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <StatusBar style="light" />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <StatusBar style={isDark ? 'light' : 'dark'} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#60A5FA" />
-          <Text style={styles.loadingText}>Loading dealers...</Text>
+          <ActivityIndicator size="large" color={colors.primaryLight} />
+          <Text style={[styles.loadingText, { color: colors.textSecondary, fontFamily: Fonts.light }]}>Loading dealers...</Text>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
+          <Text style={[styles.backButtonText, { color: colors.primaryLight, fontFamily: Fonts.semiBold }]}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Manage Dealers</Text>
+        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: Fonts.bold }]}>Manage Dealers</Text>
         <TouchableOpacity
           onPress={() => {
             router.push('/admin-register');
           }}
-          style={styles.addButton}
+          style={[styles.addButton, { backgroundColor: colors.primary }]}
         >
-          <Text style={styles.addButtonText}>+ Add</Text>
+          <Text style={[styles.addButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>+ Add</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView style={[styles.scrollView, { backgroundColor: colors.background }]} contentContainerStyle={styles.scrollContent}>
         {/* Dealers List */}
         <View style={styles.dealersContainer}>
-          <Text style={styles.sectionTitle}>
+          <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: Fonts.bold }]}>
             My Dealers ({dealers.length})
           </Text>
 
           {dealers.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
+              <Text style={[styles.emptyText, { color: colors.textTertiary, fontFamily: Fonts.light }]}>
                 No dealers yet. Add your first dealer!
               </Text>
             </View>
           ) : (
             dealers.map((dealer) => (
-              <View key={dealer.id} style={styles.dealerCard}>
+              <View key={dealer.id} style={[styles.dealerCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                 <View style={styles.dealerInfo}>
                   <View style={styles.dealerHeader}>
-                    <Text style={styles.dealerName}>{dealer.name}</Text>
-                    <View style={styles.roleBadge}>
-                      <Text style={styles.roleText}>{dealer.role.toUpperCase()}</Text>
+                    <Text style={[styles.dealerName, { color: colors.text, fontFamily: Fonts.bold }]}>{dealer.name}</Text>
+                    <View style={[styles.roleBadge, { backgroundColor: colors.roleDellear }]}>
+                      <Text style={[styles.roleText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>{dealer.role.toUpperCase()}</Text>
                     </View>
                   </View>
-                  <Text style={styles.dealerEmail}>{dealer.email}</Text>
+                  <Text style={[styles.dealerEmail, { color: colors.textSecondary, fontFamily: Fonts.light }]}>{dealer.email}</Text>
                   {dealer.createdAt && (
-                    <Text style={styles.dealerDate}>
+                    <Text style={[styles.dealerDate, { color: colors.textTertiary, fontFamily: Fonts.light }]}>
                       Created: {new Date(dealer.createdAt).toLocaleDateString()}
                     </Text>
                   )}
@@ -220,24 +222,24 @@ export default function ManageDealersScreen() {
 
                 <View style={styles.dealerActions}>
                   <TouchableOpacity
-                    style={styles.viewDetailsButton}
+                    style={[styles.viewDetailsButton, { backgroundColor: colors.success }]}
                     onPress={() => router.push(`/dealer-detail/${dealer.id}`)}
                   >
-                    <Text style={styles.viewDetailsButtonText}>View Details</Text>
+                    <Text style={[styles.viewDetailsButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>View Details</Text>
                   </TouchableOpacity>
                   
                   <TouchableOpacity
-                    style={styles.editButton}
+                    style={[styles.editButton, { backgroundColor: colors.info }]}
                     onPress={() => handleEdit(dealer)}
                   >
-                    <Text style={styles.editButtonText}>Edit</Text>
+                    <Text style={[styles.editButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>Edit</Text>
                   </TouchableOpacity>
                   
                   <TouchableOpacity
-                    style={styles.deleteButton}
+                    style={[styles.deleteButton, { backgroundColor: colors.error }]}
                     onPress={() => handleDelete(dealer.id, dealer.name)}
                   >
-                    <Text style={styles.deleteButtonText}>Delete</Text>
+                    <Text style={[styles.deleteButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>Delete</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -253,29 +255,39 @@ export default function ManageDealersScreen() {
         animationType="slide"
         onRequestClose={handleCancelEdit}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Edit Dealer</Text>
+        <View style={[styles.modalOverlay, { backgroundColor: colors.overlayDark }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.text, fontFamily: Fonts.bold }]}>Edit Dealer</Text>
             
             {error ? (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
+              <View style={[styles.errorContainer, { backgroundColor: colors.errorBackground, borderColor: colors.error }]}>
+                <Text style={[styles.errorText, { color: colors.error, fontFamily: Fonts.light }]}>{error}</Text>
               </View>
             ) : null}
 
             <TextInput
-              style={styles.modalInput}
+              style={[styles.modalInput, {
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.inputBorder,
+                color: colors.inputText,
+                fontFamily: Fonts.regular,
+              }]}
               placeholder="Name *"
-              placeholderTextColor="#6B7280"
+              placeholderTextColor={colors.inputPlaceholder}
               value={name}
               onChangeText={(text) => { setName(text); setError(''); }}
               editable={!submitting}
             />
 
             <TextInput
-              style={styles.modalInput}
+              style={[styles.modalInput, {
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.inputBorder,
+                color: colors.inputText,
+                fontFamily: Fonts.regular,
+              }]}
               placeholder="Email *"
-              placeholderTextColor="#6B7280"
+              placeholderTextColor={colors.inputPlaceholder}
               value={email}
               onChangeText={(text) => { setEmail(text); setError(''); }}
               keyboardType="email-address"
@@ -284,36 +296,41 @@ export default function ManageDealersScreen() {
             />
 
             <TextInput
-              style={styles.modalInput}
+              style={[styles.modalInput, {
+                backgroundColor: colors.inputBackground,
+                borderColor: colors.inputBorder,
+                color: colors.inputText,
+                fontFamily: Fonts.regular,
+              }]}
               placeholder="Password (leave blank to keep current)"
-              placeholderTextColor="#6B7280"
+              placeholderTextColor={colors.inputPlaceholder}
               value={password}
               onChangeText={(text) => { setPassword(text); setError(''); }}
               secureTextEntry
               editable={!submitting}
             />
 
-            <Text style={styles.hintText}>
+            <Text style={[styles.hintText, { color: colors.textTertiary, fontFamily: Fonts.light }]}>
               Leave password blank to keep the current password
             </Text>
 
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.modalCancelButton]}
+                style={[styles.modalButton, { backgroundColor: colors.secondary }]}
                 onPress={handleCancelEdit}
                 disabled={submitting}
               >
-                <Text style={styles.modalButtonText}>Cancel</Text>
+                <Text style={[styles.modalButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.modalSubmitButton, { opacity: submitting ? 0.6 : 1 }]}
+                style={[styles.modalButton, { backgroundColor: colors.primary, opacity: submitting ? 0.6 : 1 }]}
                 onPress={handleUpdate}
                 disabled={submitting}
               >
                 {submitting ? (
-                  <ActivityIndicator color="#FFFFFF" />
+                  <ActivityIndicator color={colors.textInverse} />
                 ) : (
-                  <Text style={styles.modalButtonText}>Update</Text>
+                  <Text style={[styles.modalButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>Update</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -327,19 +344,15 @@ export default function ManageDealersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000000',
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 16,
-    fontFamily: 'Poppins-Light',
-    color: '#FFFFFF',
+    fontSize: Fonts.sizes.base,
   },
   header: {
     flexDirection: 'row',
@@ -348,21 +361,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#1F1F1F',
-    backgroundColor: '#000000',
   },
   backButton: {
     padding: 8,
   },
   backButtonText: {
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#60A5FA',
+    fontSize: Fonts.sizes.base,
   },
   headerTitle: {
-    fontSize: 20,
-    fontFamily: 'Poppins-Bold',
-    color: '#FFFFFF',
+    fontSize: Fonts.sizes.xl,
     flex: 1,
     textAlign: 'center',
   },
@@ -370,24 +377,18 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#3B82F6',
   },
   addButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: Fonts.sizes.sm,
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#000000',
   },
   scrollContent: {
     padding: 16,
   },
   hintText: {
-    fontSize: 12,
-    fontFamily: 'Poppins-Light',
-    color: '#9CA3AF',
+    fontSize: Fonts.sizes.xs,
     marginTop: -8,
     marginBottom: 12,
   },
@@ -395,23 +396,17 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
-    backgroundColor: '#DC262620',
     borderWidth: 1,
-    borderColor: '#DC2626',
   },
   errorText: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Light',
+    fontSize: Fonts.sizes.sm,
     textAlign: 'center',
-    color: '#DC2626',
   },
   dealersContainer: {
     gap: 12,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontFamily: 'Poppins-Bold',
-    color: '#FFFFFF',
+    fontSize: Fonts.sizes.lg,
     marginBottom: 12,
   },
   emptyContainer: {
@@ -419,17 +414,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 16,
-    fontFamily: 'Poppins-Light',
+    fontSize: Fonts.sizes.base,
     textAlign: 'center',
-    color: '#9CA3AF',
   },
   dealerCard: {
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    backgroundColor: '#1D1D1D',
-    borderColor: '#374151',
     marginBottom: 12,
   },
   dealerInfo: {
@@ -442,32 +433,23 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   dealerName: {
-    fontSize: 18,
-    fontFamily: 'Poppins-Bold',
-    color: '#FFFFFF',
+    fontSize: Fonts.sizes.lg,
     flex: 1,
   },
   roleBadge: {
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 6,
-    backgroundColor: '#2563EB',
   },
   roleText: {
-    fontSize: 10,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#FFFFFF',
+    fontSize: Fonts.sizes.xs,
   },
   dealerEmail: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Light',
-    color: '#D1D5DB',
+    fontSize: Fonts.sizes.sm,
     marginBottom: 4,
   },
   dealerDate: {
-    fontSize: 12,
-    fontFamily: 'Poppins-Light',
-    color: '#9CA3AF',
+    fontSize: Fonts.sizes.xs,
   },
   dealerActions: {
     flexDirection: 'row',
@@ -479,43 +461,33 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#10B981',
     alignItems: 'center',
   },
   viewDetailsButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: Fonts.sizes.sm,
   },
   editButton: {
     flex: 1,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#2563EB',
     alignItems: 'center',
   },
   editButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: Fonts.sizes.sm,
   },
   deleteButton: {
     flex: 1,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#DC2626',
     alignItems: 'center',
   },
   deleteButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: Fonts.sizes.sm,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -525,14 +497,10 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     borderRadius: 12,
     padding: 24,
-    backgroundColor: '#1D1D1D',
     borderWidth: 1,
-    borderColor: '#374151',
   },
   modalTitle: {
-    fontSize: 20,
-    fontFamily: 'Poppins-Bold',
-    color: '#FFFFFF',
+    fontSize: Fonts.sizes.xl,
     marginBottom: 16,
   },
   modalInput: {
@@ -540,12 +508,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    fontSize: 16,
+    fontSize: Fonts.sizes.base,
     marginBottom: 12,
-    backgroundColor: '#111827',
-    borderColor: '#374151',
-    color: '#FFFFFF',
-    fontFamily: 'Poppins-Light',
   },
   modalButtons: {
     flexDirection: 'row',
@@ -559,16 +523,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  modalCancelButton: {
-    backgroundColor: '#6B7280',
-  },
-  modalSubmitButton: {
-    backgroundColor: '#3B82F6',
-  },
   modalButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: Fonts.sizes.base,
   },
 });
 

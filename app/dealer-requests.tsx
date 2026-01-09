@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, useColorScheme, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, Alert, ActivityIndicator, Image, Modal } from 'react-native';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { getDealerRequests, approveDealerRequest, cancelDealerRequest, DealerRequest } from '@/services/dealerRequestService';
+import { getDealerRequests, approveDealerRequest, cancelDealerRequest, verifyPayment, rejectPayment, DealerRequest } from '@/services/dealerRequestService';
 import { getUser, User } from '@/services/authService';
+import { useTheme } from '@/contexts/ThemeContext';
+import { Colors, Fonts } from '@/constants/theme';
 
 type FilterStatus = 'all' | 'pending' | 'approved' | 'cancelled';
 type SortOption = 'newest' | 'oldest' | 'dealer' | 'product' | 'strips';
@@ -23,8 +25,8 @@ export default function DealerRequestsScreen() {
   const [sortOption, setSortOption] = useState<SortOption>('newest');
   const [showFilters, setShowFilters] = useState(false);
 
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { isDark, colorScheme } = useTheme();
+  const colors = Colors[colorScheme];
 
   useEffect(() => {
     loadUser();
@@ -101,7 +103,63 @@ export default function DealerRequestsScreen() {
     setFilteredRequests(filtered);
   };
 
+  const handleVerifyPayment = async (requestId: string) => {
+    Alert.alert(
+      'Verify Payment',
+      'Are you sure the payment receipt is valid?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Verify',
+          onPress: async () => {
+            try {
+              await verifyPayment(requestId);
+              Alert.alert('Success', 'Payment verified successfully. You can now approve the request.');
+              loadRequests();
+            } catch (err: any) {
+              Alert.alert('Error', err.message || 'Failed to verify payment');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleRejectPayment = async (requestId: string) => {
+    Alert.prompt(
+      'Reject Payment',
+      'Please provide a reason for rejecting this payment receipt:',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reject',
+          style: 'destructive',
+          onPress: async (notes) => {
+            try {
+              await rejectPayment(requestId, notes || 'Receipt rejected');
+              Alert.alert('Success', 'Payment rejected. Dealer can upload a new receipt.');
+              loadRequests();
+            } catch (err: any) {
+              Alert.alert('Error', err.message || 'Failed to reject payment');
+            }
+          },
+        },
+      ],
+      'plain-text'
+    );
+  };
+
   const handleApproveRequest = async (requestId: string) => {
+    const request = requests.find(r => r.id === requestId);
+    if (request && request.paymentStatus !== 'verified') {
+      Alert.alert(
+        'Payment Not Verified',
+        'You must verify the payment before approving the request.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     Alert.alert(
       'Approve Request',
       'Are you sure you want to approve this request?',
@@ -149,11 +207,37 @@ export default function DealerRequestsScreen() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'approved':
-        return '#10B981';
+        return colors.success;
       case 'cancelled':
-        return '#DC2626';
+        return colors.error;
       default:
-        return '#F59E0B';
+        return colors.warning;
+    }
+  };
+
+  const getPaymentStatusColor = (paymentStatus: string) => {
+    switch (paymentStatus) {
+      case 'verified':
+        return colors.success;
+      case 'rejected':
+        return colors.error;
+      case 'paid':
+        return colors.primary;
+      default:
+        return colors.textTertiary;
+    }
+  };
+
+  const getPaymentStatusText = (paymentStatus: string) => {
+    switch (paymentStatus) {
+      case 'verified':
+        return 'Verified';
+      case 'rejected':
+        return 'Rejected';
+      case 'paid':
+        return 'Pending Verification';
+      default:
+        return 'Pending';
     }
   };
 
@@ -179,81 +263,88 @@ export default function DealerRequestsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <StatusBar style="light" />
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <StatusBar style={isDark ? 'light' : 'dark'} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#60A5FA" />
-          <Text style={styles.loadingText}>Loading requests...</Text>
+          <ActivityIndicator size="large" color={colors.primaryLight} />
+          <Text style={[styles.loadingText, { color: colors.textSecondary, fontFamily: Fonts.light }]}>Loading requests...</Text>
         </View>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
+          <Text style={[styles.backButtonText, { color: colors.primaryLight, fontFamily: Fonts.semiBold }]}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Dealer Requests</Text>
+        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: Fonts.bold }]}>Dealer Requests</Text>
         <TouchableOpacity
           onPress={() => setShowFilters(!showFilters)}
-          style={styles.filterButton}
+          style={[styles.filterButton, { backgroundColor: colors.primary }]}
         >
-          <Text style={styles.filterButtonText}>
+          <Text style={[styles.filterButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>
             {showFilters ? 'Hide Filters' : 'Filters'}
           </Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView style={[styles.scrollView, { backgroundColor: colors.background }]} contentContainerStyle={styles.scrollContent}>
         {/* Statistics */}
         <View style={styles.statsContainer}>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{statusCounts.all}</Text>
-            <Text style={styles.statLabel}>Total</Text>
+          <View style={[styles.statCard, { backgroundColor: colors.cardBackground }]}>
+            <Text style={[styles.statValue, { color: colors.text, fontFamily: Fonts.bold }]}>{statusCounts.all}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary, fontFamily: Fonts.light }]}>Total</Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: '#F59E0B20' }]}>
-            <Text style={[styles.statValue, { color: '#F59E0B' }]}>{statusCounts.pending}</Text>
-            <Text style={styles.statLabel}>Pending</Text>
+          <View style={[styles.statCard, { backgroundColor: `${colors.warning}20` }]}>
+            <Text style={[styles.statValue, { color: colors.warning, fontFamily: Fonts.bold }]}>{statusCounts.pending}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary, fontFamily: Fonts.light }]}>Pending</Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: '#10B98120' }]}>
-            <Text style={[styles.statValue, { color: '#10B981' }]}>{statusCounts.approved}</Text>
-            <Text style={styles.statLabel}>Approved</Text>
+          <View style={[styles.statCard, { backgroundColor: `${colors.success}20` }]}>
+            <Text style={[styles.statValue, { color: colors.success, fontFamily: Fonts.bold }]}>{statusCounts.approved}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary, fontFamily: Fonts.light }]}>Approved</Text>
           </View>
-          <View style={[styles.statCard, { backgroundColor: '#DC262620' }]}>
-            <Text style={[styles.statValue, { color: '#DC2626' }]}>{statusCounts.cancelled}</Text>
-            <Text style={styles.statLabel}>Cancelled</Text>
+          <View style={[styles.statCard, { backgroundColor: `${colors.error}20` }]}>
+            <Text style={[styles.statValue, { color: colors.error, fontFamily: Fonts.bold }]}>{statusCounts.cancelled}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary, fontFamily: Fonts.light }]}>Cancelled</Text>
           </View>
         </View>
 
         {/* Filters Section */}
         {showFilters && (
-          <View style={styles.filtersContainer}>
-            <Text style={styles.filtersTitle}>Filters & Sorting</Text>
+          <View style={[styles.filtersContainer, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
+            <Text style={[styles.filtersTitle, { color: colors.text, fontFamily: Fonts.bold }]}>Filters & Sorting</Text>
 
             {/* Status Filter */}
             <View style={styles.filterSection}>
-              <Text style={styles.filterLabel}>Status:</Text>
+              <Text style={[styles.filterLabel, { color: colors.textSecondary, fontFamily: Fonts.semiBold }]}>Status:</Text>
               <View style={styles.filterButtons}>
                 {(['all', 'pending', 'approved', 'cancelled'] as FilterStatus[]).map((status) => (
                   <TouchableOpacity
                     key={status}
                     style={[
                       styles.filterChip,
-                      statusFilter === status && styles.filterChipActive,
-                      status === 'pending' && statusFilter === status && { backgroundColor: '#F59E0B' },
-                      status === 'approved' && statusFilter === status && { backgroundColor: '#10B981' },
-                      status === 'cancelled' && statusFilter === status && { backgroundColor: '#DC2626' },
+                      {
+                        backgroundColor: statusFilter === status 
+                          ? (status === 'pending' ? colors.warning : status === 'approved' ? colors.success : status === 'cancelled' ? colors.error : colors.primary)
+                          : colors.inputBackground,
+                        borderColor: statusFilter === status 
+                          ? (status === 'pending' ? colors.warning : status === 'approved' ? colors.success : status === 'cancelled' ? colors.error : colors.primary)
+                          : colors.inputBorder,
+                      },
                     ]}
                     onPress={() => setStatusFilter(status)}
                   >
                     <Text style={[
                       styles.filterChipText,
-                      statusFilter === status && styles.filterChipTextActive
+                      {
+                        color: statusFilter === status ? colors.textInverse : colors.textSecondary,
+                        fontFamily: Fonts.medium,
+                      }
                     ]}>
                       {status.charAt(0).toUpperCase() + status.slice(1)} ({statusCounts[status]})
                     </Text>
@@ -265,23 +356,35 @@ export default function DealerRequestsScreen() {
             {/* Dealer Filter */}
             {uniqueDealers.length > 0 && (
               <View style={styles.filterSection}>
-                <Text style={styles.filterLabel}>Dealer:</Text>
+                <Text style={[styles.filterLabel, { color: colors.textSecondary, fontFamily: Fonts.semiBold }]}>Dealer:</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
                   <TouchableOpacity
-                    style={[styles.filterChip, dealerFilter === 'all' && styles.filterChipActive]}
+                    style={[styles.filterChip, {
+                      backgroundColor: dealerFilter === 'all' ? colors.primary : colors.inputBackground,
+                      borderColor: dealerFilter === 'all' ? colors.primary : colors.inputBorder,
+                    }]}
                     onPress={() => setDealerFilter('all')}
                   >
-                    <Text style={[styles.filterChipText, dealerFilter === 'all' && styles.filterChipTextActive]}>
+                    <Text style={[styles.filterChipText, {
+                      color: dealerFilter === 'all' ? colors.textInverse : colors.textSecondary,
+                      fontFamily: Fonts.medium,
+                    }]}>
                       All Dealers
                     </Text>
                   </TouchableOpacity>
                   {uniqueDealers.map((dealer) => (
                     <TouchableOpacity
                       key={dealer.id}
-                      style={[styles.filterChip, dealerFilter === dealer.id && styles.filterChipActive]}
+                      style={[styles.filterChip, {
+                        backgroundColor: dealerFilter === dealer.id ? colors.primary : colors.inputBackground,
+                        borderColor: dealerFilter === dealer.id ? colors.primary : colors.inputBorder,
+                      }]}
                       onPress={() => setDealerFilter(dealer.id)}
                     >
-                      <Text style={[styles.filterChipText, dealerFilter === dealer.id && styles.filterChipTextActive]}>
+                      <Text style={[styles.filterChipText, {
+                        color: dealerFilter === dealer.id ? colors.textInverse : colors.textSecondary,
+                        fontFamily: Fonts.medium,
+                      }]}>
                         {dealer.name}
                       </Text>
                     </TouchableOpacity>
@@ -293,23 +396,35 @@ export default function DealerRequestsScreen() {
             {/* Product Filter */}
             {uniqueProducts.length > 0 && (
               <View style={styles.filterSection}>
-                <Text style={styles.filterLabel}>Product:</Text>
+                <Text style={[styles.filterLabel, { color: colors.textSecondary, fontFamily: Fonts.semiBold }]}>Product:</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
                   <TouchableOpacity
-                    style={[styles.filterChip, productFilter === 'all' && styles.filterChipActive]}
+                    style={[styles.filterChip, {
+                      backgroundColor: productFilter === 'all' ? colors.primary : colors.inputBackground,
+                      borderColor: productFilter === 'all' ? colors.primary : colors.inputBorder,
+                    }]}
                     onPress={() => setProductFilter('all')}
                   >
-                    <Text style={[styles.filterChipText, productFilter === 'all' && styles.filterChipTextActive]}>
+                    <Text style={[styles.filterChipText, {
+                      color: productFilter === 'all' ? colors.textInverse : colors.textSecondary,
+                      fontFamily: Fonts.medium,
+                    }]}>
                       All Products
                     </Text>
                   </TouchableOpacity>
                   {uniqueProducts.map((product) => (
                     <TouchableOpacity
                       key={product.id}
-                      style={[styles.filterChip, productFilter === product.id && styles.filterChipActive]}
+                      style={[styles.filterChip, {
+                        backgroundColor: productFilter === product.id ? colors.primary : colors.inputBackground,
+                        borderColor: productFilter === product.id ? colors.primary : colors.inputBorder,
+                      }]}
                       onPress={() => setProductFilter(product.id)}
                     >
-                      <Text style={[styles.filterChipText, productFilter === product.id && styles.filterChipTextActive]}>
+                      <Text style={[styles.filterChipText, {
+                        color: productFilter === product.id ? colors.textInverse : colors.textSecondary,
+                        fontFamily: Fonts.medium,
+                      }]}>
                         {product.title}
                       </Text>
                     </TouchableOpacity>
@@ -320,7 +435,7 @@ export default function DealerRequestsScreen() {
 
             {/* Sort Options */}
             <View style={styles.filterSection}>
-              <Text style={styles.filterLabel}>Sort By:</Text>
+              <Text style={[styles.filterLabel, { color: colors.textSecondary, fontFamily: Fonts.semiBold }]}>Sort By:</Text>
               <View style={styles.filterButtons}>
                 {[
                   { value: 'newest' as SortOption, label: 'Newest First' },
@@ -331,10 +446,16 @@ export default function DealerRequestsScreen() {
                 ].map((option) => (
                   <TouchableOpacity
                     key={option.value}
-                    style={[styles.filterChip, sortOption === option.value && styles.filterChipActive]}
+                    style={[styles.filterChip, {
+                      backgroundColor: sortOption === option.value ? colors.primary : colors.inputBackground,
+                      borderColor: sortOption === option.value ? colors.primary : colors.inputBorder,
+                    }]}
                     onPress={() => setSortOption(option.value)}
                   >
-                    <Text style={[styles.filterChipText, sortOption === option.value && styles.filterChipTextActive]}>
+                    <Text style={[styles.filterChipText, {
+                      color: sortOption === option.value ? colors.textInverse : colors.textSecondary,
+                      fontFamily: Fonts.medium,
+                    }]}>
                       {option.label}
                     </Text>
                   </TouchableOpacity>
@@ -344,7 +465,7 @@ export default function DealerRequestsScreen() {
 
             {/* Clear Filters */}
             <TouchableOpacity
-              style={styles.clearFiltersButton}
+              style={[styles.clearFiltersButton, { backgroundColor: colors.secondary }]}
               onPress={() => {
                 setStatusFilter('all');
                 setDealerFilter('all');
@@ -352,14 +473,14 @@ export default function DealerRequestsScreen() {
                 setSortOption('newest');
               }}
             >
-              <Text style={styles.clearFiltersText}>Clear All Filters</Text>
+              <Text style={[styles.clearFiltersText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>Clear All Filters</Text>
             </TouchableOpacity>
           </View>
         )}
 
         {/* Results Count */}
         <View style={styles.resultsHeader}>
-          <Text style={styles.resultsText}>
+          <Text style={[styles.resultsText, { color: colors.textSecondary, fontFamily: Fonts.light }]}>
             Showing {filteredRequests.length} of {requests.length} requests
           </Text>
         </View>
@@ -367,7 +488,7 @@ export default function DealerRequestsScreen() {
         {/* Requests List */}
         {filteredRequests.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
+            <Text style={[styles.emptyText, { color: colors.textTertiary, fontFamily: Fonts.light }]}>
               {requests.length === 0 
                 ? 'No dealer requests yet.' 
                 : 'No requests match your filters.'}
@@ -375,80 +496,143 @@ export default function DealerRequestsScreen() {
           </View>
         ) : (
           filteredRequests.map((request) => (
-            <View key={request.id} style={styles.requestCard}>
+            <View key={request.id} style={[styles.requestCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
               <View style={styles.requestHeader}>
                 <View style={styles.requestInfo}>
-                  <Text style={styles.requestProductTitle}>{request.product.title}</Text>
-                  <Text style={styles.requestDealerName}>
+                  <Text style={[styles.requestProductTitle, { color: colors.text, fontFamily: Fonts.bold }]}>{request.product.title}</Text>
+                  <Text style={[styles.requestDealerName, { color: colors.textSecondary, fontFamily: Fonts.light }]}>
                     {request.dealer.name} • {request.dealer.email}
                   </Text>
                 </View>
                 <View style={[styles.statusBadge, { backgroundColor: getStatusColor(request.status) }]}>
-                  <Text style={styles.statusText}>{request.status.toUpperCase()}</Text>
+                  <Text style={[styles.statusText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>{request.status.toUpperCase()}</Text>
                 </View>
               </View>
+
+              {/* Payment Status */}
+              <View style={styles.paymentStatusContainer}>
+                <Text style={[styles.paymentStatusLabel, { color: colors.textSecondary, fontFamily: Fonts.semiBold }]}>Payment Status:</Text>
+                <View style={[styles.paymentStatusBadge, { backgroundColor: getPaymentStatusColor(request.paymentStatus) }]}>
+                  <Text style={[styles.paymentStatusText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>
+                    {getPaymentStatusText(request.paymentStatus)}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Receipt Image */}
+              {request.receiptImage && (
+                <View style={styles.receiptContainer}>
+                  <Text style={[styles.receiptLabel, { color: colors.textSecondary, fontFamily: Fonts.semiBold }]}>Payment Receipt:</Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      // Show full image in modal
+                      Alert.alert('Receipt', 'View receipt image', [
+                        { text: 'Close' }
+                      ]);
+                    }}
+                  >
+                    <Image source={{ uri: request.receiptImage }} style={styles.receiptImage} />
+                  </TouchableOpacity>
+                </View>
+              )}
 
               <View style={styles.requestDetails}>
                 <View style={styles.requestDetailRow}>
                   <View style={styles.requestDetailItem}>
-                    <Text style={styles.requestDetailLabel}>Requested Strips:</Text>
-                    <Text style={styles.requestDetailValue}>{request.strips} strips</Text>
+                    <Text style={[styles.requestDetailLabel, { color: colors.textSecondary, fontFamily: Fonts.light }]}>Requested Strips:</Text>
+                    <Text style={[styles.requestDetailValue, { color: colors.text, fontFamily: Fonts.semiBold }]}>{request.strips} strips</Text>
                   </View>
                   <View style={styles.requestDetailItem}>
-                    <Text style={styles.requestDetailLabel}>Total Packets:</Text>
-                    <Text style={styles.requestDetailValue}>
+                    <Text style={[styles.requestDetailLabel, { color: colors.textSecondary, fontFamily: Fonts.light }]}>Total Packets:</Text>
+                    <Text style={[styles.requestDetailValue, { color: colors.text, fontFamily: Fonts.semiBold }]}>
                       {request.strips * request.product.packetsPerStrip} packets
                     </Text>
                   </View>
                 </View>
                 <View style={styles.requestDetailRow}>
                   <View style={styles.requestDetailItem}>
-                    <Text style={styles.requestDetailLabel}>Packet Price:</Text>
-                    <Text style={styles.requestDetailValue}>₹{request.product.packetPrice.toFixed(2)}</Text>
+                    <Text style={[styles.requestDetailLabel, { color: colors.textSecondary, fontFamily: Fonts.light }]}>Packet Price:</Text>
+                    <Text style={[styles.requestDetailValue, { color: colors.text, fontFamily: Fonts.semiBold }]}>₹{request.product.packetPrice.toFixed(2)}</Text>
                   </View>
                   <View style={styles.requestDetailItem}>
-                    <Text style={styles.requestDetailLabel}>Total Value:</Text>
-                    <Text style={styles.requestDetailValue}>
+                    <Text style={[styles.requestDetailLabel, { color: colors.textSecondary, fontFamily: Fonts.light }]}>Total Value:</Text>
+                    <Text style={[styles.requestDetailValue, { color: colors.text, fontFamily: Fonts.semiBold }]}>
                       ₹{(request.strips * request.product.packetsPerStrip * request.product.packetPrice).toFixed(2)}
                     </Text>
                   </View>
                 </View>
                 <View style={styles.requestDetailRow}>
-                  <Text style={styles.requestDetailLabel}>Requested At:</Text>
-                  <Text style={styles.requestDetailValue}>
+                  <Text style={[styles.requestDetailLabel, { color: colors.textSecondary, fontFamily: Fonts.light }]}>Requested At:</Text>
+                  <Text style={[styles.requestDetailValue, { color: colors.text, fontFamily: Fonts.semiBold }]}>
                     {new Date(request.requestedAt).toLocaleString()}
                   </Text>
                 </View>
                 {request.processedBy && (
                   <View style={styles.requestDetailRow}>
-                    <Text style={styles.requestDetailLabel}>Processed By:</Text>
-                    <Text style={styles.requestDetailValue}>{request.processedBy.name}</Text>
+                    <Text style={[styles.requestDetailLabel, { color: colors.textSecondary, fontFamily: Fonts.light }]}>Processed By:</Text>
+                    <Text style={[styles.requestDetailValue, { color: colors.text, fontFamily: Fonts.semiBold }]}>{request.processedBy.name}</Text>
                   </View>
                 )}
                 {request.processedAt && (
                   <View style={styles.requestDetailRow}>
-                    <Text style={styles.requestDetailLabel}>Processed At:</Text>
-                    <Text style={styles.requestDetailValue}>
+                    <Text style={[styles.requestDetailLabel, { color: colors.textSecondary, fontFamily: Fonts.light }]}>Processed At:</Text>
+                    <Text style={[styles.requestDetailValue, { color: colors.text, fontFamily: Fonts.semiBold }]}>
                       {new Date(request.processedAt).toLocaleString()}
                     </Text>
                   </View>
                 )}
               </View>
 
+              {/* Payment Actions */}
+              {request.status === 'pending' && request.paymentStatus === 'paid' && (
+                <View style={styles.paymentActions}>
+                  <TouchableOpacity
+                    style={[styles.paymentButton, { backgroundColor: colors.success }]}
+                    onPress={() => handleVerifyPayment(request.id)}
+                  >
+                    <Text style={[styles.paymentButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>Verify Payment</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.paymentButton, { backgroundColor: colors.error }]}
+                    onPress={() => handleRejectPayment(request.id)}
+                  >
+                    <Text style={[styles.paymentButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>Reject Payment</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Request Actions */}
               {request.status === 'pending' && (
                 <View style={styles.requestActions}>
                   <TouchableOpacity
-                    style={[styles.requestButton, styles.approveButton]}
+                    style={[
+                      styles.requestButton, 
+                      { 
+                        backgroundColor: request.paymentStatus === 'verified' ? colors.success : colors.textTertiary,
+                        opacity: request.paymentStatus === 'verified' ? 1 : 0.5,
+                      }
+                    ]}
                     onPress={() => handleApproveRequest(request.id)}
+                    disabled={request.paymentStatus !== 'verified'}
                   >
-                    <Text style={styles.requestButtonText}>Approve</Text>
+                    <Text style={[styles.requestButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>
+                      {request.paymentStatus === 'verified' ? 'Approve Request' : 'Approve (Payment Required)'}
+                    </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.requestButton, styles.cancelButton]}
+                    style={[styles.requestButton, { backgroundColor: colors.error }]}
                     onPress={() => handleCancelRequest(request.id)}
                   >
-                    <Text style={styles.requestButtonText}>Cancel</Text>
+                    <Text style={[styles.requestButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>Cancel</Text>
                   </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Payment Notes */}
+              {request.paymentNotes && (
+                <View style={[styles.notesContainer, { backgroundColor: `${colors.warning}20` }]}>
+                  <Text style={[styles.notesLabel, { color: colors.textSecondary, fontFamily: Fonts.semiBold }]}>Admin Notes:</Text>
+                  <Text style={[styles.notesText, { color: colors.text, fontFamily: Fonts.light }]}>{request.paymentNotes}</Text>
                 </View>
               )}
             </View>
@@ -462,19 +646,15 @@ export default function DealerRequestsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#000000',
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 16,
-    fontFamily: 'Poppins-Light',
-    color: '#FFFFFF',
+    fontSize: Fonts.sizes.base,
   },
   header: {
     flexDirection: 'row',
@@ -483,21 +663,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#1F1F1F',
-    backgroundColor: '#000000',
   },
   backButton: {
     padding: 8,
   },
   backButtonText: {
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#60A5FA',
+    fontSize: Fonts.sizes.base,
   },
   headerTitle: {
-    fontSize: 20,
-    fontFamily: 'Poppins-Bold',
-    color: '#FFFFFF',
+    fontSize: Fonts.sizes.xl,
     flex: 1,
     textAlign: 'center',
   },
@@ -505,16 +679,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#3B82F6',
   },
   filterButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: Fonts.sizes.sm,
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#000000',
   },
   scrollContent: {
     padding: 16,
@@ -528,41 +698,30 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: '#1D1D1D',
     alignItems: 'center',
   },
   statValue: {
-    fontSize: 24,
-    fontFamily: 'Poppins-Bold',
-    color: '#FFFFFF',
+    fontSize: Fonts.sizes['2xl'],
   },
   statLabel: {
-    fontSize: 12,
-    fontFamily: 'Poppins-Light',
-    color: '#9CA3AF',
+    fontSize: Fonts.sizes.xs,
     marginTop: 4,
   },
   filtersContainer: {
     padding: 16,
     borderRadius: 12,
     marginBottom: 16,
-    backgroundColor: '#1D1D1D',
     borderWidth: 1,
-    borderColor: '#374151',
   },
   filtersTitle: {
-    fontSize: 18,
-    fontFamily: 'Poppins-Bold',
-    color: '#FFFFFF',
+    fontSize: Fonts.sizes.lg,
     marginBottom: 16,
   },
   filterSection: {
     marginBottom: 16,
   },
   filterLabel: {
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#D1D5DB',
+    fontSize: Fonts.sizes.sm,
     marginBottom: 8,
   },
   filterButtons: {
@@ -577,50 +736,29 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: '#111827',
     borderWidth: 1,
-    borderColor: '#374151',
     marginRight: 8,
-  },
-  filterChipActive: {
-    backgroundColor: '#3B82F6',
-    borderColor: '#3B82F6',
-  },
-  filterChipText: {
-    fontSize: 12,
-    fontFamily: 'Poppins-Medium',
-    color: '#9CA3AF',
-  },
-  filterChipTextActive: {
-    color: '#FFFFFF',
   },
   clearFiltersButton: {
     paddingVertical: 12,
     borderRadius: 8,
-    backgroundColor: '#6B7280',
     alignItems: 'center',
     marginTop: 8,
   },
   clearFiltersText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: Fonts.sizes.sm,
   },
   resultsHeader: {
     marginBottom: 12,
   },
   resultsText: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Light',
-    color: '#9CA3AF',
+    fontSize: Fonts.sizes.sm,
   },
   requestCard: {
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
     marginBottom: 12,
-    backgroundColor: '#1D1D1D',
-    borderColor: '#374151',
   },
   requestHeader: {
     flexDirection: 'row',
@@ -632,15 +770,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   requestProductTitle: {
-    fontSize: 18,
-    fontFamily: 'Poppins-Bold',
-    color: '#FFFFFF',
+    fontSize: Fonts.sizes.lg,
     marginBottom: 4,
   },
   requestDealerName: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Light',
-    color: '#D1D5DB',
+    fontSize: Fonts.sizes.sm,
   },
   statusBadge: {
     paddingVertical: 6,
@@ -648,9 +782,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   statusText: {
-    fontSize: 12,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#FFFFFF',
+    fontSize: Fonts.sizes.xs,
   },
   requestDetails: {
     gap: 8,
@@ -666,15 +798,11 @@ const styles = StyleSheet.create({
     minWidth: '45%',
   },
   requestDetailLabel: {
-    fontSize: 12,
-    fontFamily: 'Poppins-Light',
-    color: '#9CA3AF',
+    fontSize: Fonts.sizes.xs,
     marginBottom: 2,
   },
   requestDetailValue: {
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#FFFFFF',
+    fontSize: Fonts.sizes.sm,
   },
   requestActions: {
     flexDirection: 'row',
@@ -688,26 +816,77 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
   },
-  approveButton: {
-    backgroundColor: '#10B981',
-  },
-  cancelButton: {
-    backgroundColor: '#DC2626',
-  },
   requestButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: Fonts.sizes.sm,
+  },
+  paymentStatusContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#374151',
+  },
+  paymentStatusLabel: {
+    fontSize: Fonts.sizes.sm,
+  },
+  paymentStatusBadge: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  paymentStatusText: {
+    fontSize: Fonts.sizes.xs,
+  },
+  receiptContainer: {
+    marginBottom: 12,
+  },
+  receiptLabel: {
+    fontSize: Fonts.sizes.sm,
+    marginBottom: 8,
+  },
+  receiptImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    backgroundColor: '#111827',
+  },
+  paymentActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  paymentButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  paymentButtonText: {
+    fontSize: Fonts.sizes.sm,
+  },
+  notesContainer: {
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  notesLabel: {
+    fontSize: Fonts.sizes.xs,
+    marginBottom: 4,
+  },
+  notesText: {
+    fontSize: Fonts.sizes.sm,
   },
   emptyContainer: {
     padding: 32,
     alignItems: 'center',
   },
   emptyText: {
-    fontSize: 16,
-    fontFamily: 'Poppins-Light',
+    fontSize: Fonts.sizes.base,
     textAlign: 'center',
-    color: '#9CA3AF',
   },
 });
 

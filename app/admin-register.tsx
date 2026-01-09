@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, useColorScheme, Alert, ActivityIndicator } from 'react-native';
+import { Colors, Fonts } from '@/constants/theme';
+import { useTheme } from '@/contexts/ThemeContext';
+import { getAllowedRoles, getUser, registerUser } from '@/services/authService';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { registerUser, getAllowedRoles, getUser } from '@/services/authService';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 type UserRole = 'admin' | 'stalkist' | 'dellear' | 'salesman';
 
@@ -14,6 +16,8 @@ const roleLabels: Record<UserRole, string> = {
 };
 
 export default function AdminRegisterScreen() {
+  const { isDark, colorScheme } = useTheme();
+  const colors = Colors[colorScheme];
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,8 +28,7 @@ export default function AdminRegisterScreen() {
   const [allowedRoles, setAllowedRoles] = useState<UserRole[]>([]);
   const [loadingRoles, setLoadingRoles] = useState(true);
   const [currentUserRole, setCurrentUserRole] = useState<UserRole | null>(null);
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
 
   useEffect(() => {
     loadAllowedRoles();
@@ -131,7 +134,7 @@ export default function AdminRegisterScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={[styles.container, { backgroundColor: isDark ? '#111827' : '#1D1D1D' }]}
+      style={[styles.container, { backgroundColor: colors.background }]}
     >
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <ScrollView
@@ -142,18 +145,18 @@ export default function AdminRegisterScreen() {
         <View style={styles.contentWrapper}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={[styles.title, { color: isDark ? '#1D1D1D' : '#111827' }]}>
+            <Text style={[styles.title, { color: colors.text, fontFamily: Fonts.bold }]}>
               Register New User
             </Text>
-            <Text style={[styles.subtitle, { color: isDark ? '#9CA3AF' : '#4B5563' }]}>
+            <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: Fonts.light }]}>
               {getSubtitle()}
             </Text>
           </View>
 
           {/* Error Message */}
           {error ? (
-            <View style={[styles.errorContainer, { backgroundColor: isDark ? '#7F1D1D' : '#FEE2E2' }]}>
-              <Text style={[styles.errorText, { color: isDark ? '#FCA5A5' : '#DC2626' }]}>
+            <View style={[styles.errorContainer, { backgroundColor: `${colors.error}20` }]}>
+              <Text style={[styles.errorText, { color: colors.error, fontFamily: Fonts.light }]}>
                 {error}
               </Text>
             </View>
@@ -163,20 +166,21 @@ export default function AdminRegisterScreen() {
           <View style={styles.form}>
             {/* Name Input */}
             <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: isDark ? '#D1D5DB' : '#374151' }]}>
+              <Text style={[styles.label, { color: colors.textSecondary, fontFamily: Fonts.medium }]}>
                 Full Name
               </Text>
               <TextInput
                 style={[
                   styles.input,
                   {
-                    backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
-                    borderColor: isDark ? '#374151' : '#E5E7EB',
-                    color: isDark ? '#1D1D1D' : '#111827',
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.inputBorder,
+                    color: colors.inputText,
+                    fontFamily: Fonts.regular,
                   },
                 ]}
                 placeholder="Enter full name"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.inputPlaceholder}
                 value={name}
                 onChangeText={(text) => {
                   setName(text);
@@ -190,20 +194,21 @@ export default function AdminRegisterScreen() {
 
             {/* Email Input */}
             <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: isDark ? '#D1D5DB' : '#374151' }]}>
+              <Text style={[styles.label, { color: colors.textSecondary, fontFamily: Fonts.medium }]}>
                 Email
               </Text>
               <TextInput
                 style={[
                   styles.input,
                   {
-                    backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
-                    borderColor: isDark ? '#374151' : '#E5E7EB',
-                    color: isDark ? '#1D1D1D' : '#111827',
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.inputBorder,
+                    color: colors.inputText,
+                    fontFamily: Fonts.regular,
                   },
                 ]}
                 placeholder="Enter email"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.inputPlaceholder}
                 value={email}
                 onChangeText={(text) => {
                   setEmail(text);
@@ -219,82 +224,122 @@ export default function AdminRegisterScreen() {
             {/* Role Selection */}
             {loadingRoles ? (
               <View style={styles.inputContainer}>
-                <Text style={[styles.label, { color: isDark ? '#D1D5DB' : '#374151' }]}>
+                <Text style={[styles.label, { color: colors.textSecondary, fontFamily: Fonts.medium }]}>
                   Role
                 </Text>
-                <ActivityIndicator size="small" color={isDark ? '#60A5FA' : '#2563EB'} />
+                <ActivityIndicator size="small" color={colors.primaryLight} />
               </View>
             ) : allowedRoles.length > 0 ? (
               <View style={styles.inputContainer}>
-                <Text style={[styles.label, { color: isDark ? '#D1D5DB' : '#374151' }]}>
+                <Text style={[styles.label, { color: colors.textSecondary, fontFamily: Fonts.medium }]}>
                   Role
                 </Text>
-                {allowedRoles.length === 1 ? (
-                  <View style={[styles.singleRoleContainer, {
-                    backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
-                    borderColor: isDark ? '#374151' : '#E5E7EB',
-                  }]}>
-                    <Text style={[styles.singleRoleText, { color: isDark ? '#1D1D1D' : '#111827' }]}>
-                      {roleLabels[allowedRoles[0]]}
-                    </Text>
-                  </View>
-                ) : (
-                  <View style={styles.roleContainer}>
-                    {allowedRoles.map((roleOption) => (
-                      <TouchableOpacity
-                        key={roleOption}
-                        onPress={() => {
-                          setRole(roleOption);
-                          setError('');
-                        }}
-                        style={[
-                          styles.roleButton,
-                          {
-                            backgroundColor: role === roleOption
-                              ? (isDark ? '#3B82F6' : '#2563EB')
-                              : (isDark ? '#374151' : '#E5E7EB'),
-                            borderColor: role === roleOption
-                              ? (isDark ? '#60A5FA' : '#2563EB')
-                              : (isDark ? '#4B5563' : '#D1D5DB'),
-                          },
-                        ]}
-                        disabled={loading}
-                      >
-                        <Text
-                          style={[
-                            styles.roleButtonText,
-                            {
-                              color: role === roleOption
-                                ? '#1D1D1D'
-                                : (isDark ? '#D1D5DB' : '#374151'),
-                            },
-                          ]}
-                        >
-                          {roleLabels[roleOption]}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
+                <TouchableOpacity
+                  style={[
+                    styles.dropdownButton,
+                    {
+                      backgroundColor: colors.inputBackground,
+                      borderColor: colors.inputBorder,
+                    },
+                  ]}
+                  onPress={() => {
+                    if (allowedRoles.length > 1) {
+                      setShowRoleDropdown(true);
+                    }
+                  }}
+                  disabled={loading || allowedRoles.length === 1}
+                >
+                  <Text style={[styles.dropdownButtonText, { color: colors.inputText, fontFamily: Fonts.regular }]}>
+                    {roleLabels[role]}
+                  </Text>
+                  {allowedRoles.length > 1 && (
+                    <Text style={[styles.dropdownArrow, { color: colors.textTertiary }]}>▼</Text>
+                  )}
+                </TouchableOpacity>
+
+                {/* Role Dropdown Modal */}
+                <Modal
+                  visible={showRoleDropdown}
+                  transparent={true}
+                  animationType="fade"
+                  onRequestClose={() => setShowRoleDropdown(false)}
+                >
+                  <TouchableOpacity
+                    style={styles.modalOverlay}
+                    activeOpacity={1}
+                    onPress={() => setShowRoleDropdown(false)}
+                  >
+                    <View 
+                      style={[styles.dropdownModal, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
+                      onStartShouldSetResponder={() => true}
+                    >
+                      <Text style={[styles.dropdownTitle, { color: colors.text, fontFamily: Fonts.semiBold, borderBottomColor: colors.border }]}>
+                        Select Role
+                      </Text>
+                      <ScrollView style={styles.dropdownList}>
+                        {allowedRoles.map((roleOption) => (
+                          <TouchableOpacity
+                            key={roleOption}
+                            onPress={() => {
+                              setRole(roleOption);
+                              setError('');
+                              setShowRoleDropdown(false);
+                            }}
+                              style={[
+                              styles.dropdownItem,
+                              {
+                                backgroundColor: role === roleOption
+                                  ? `${colors.primary}20`
+                                  : 'transparent',
+                                borderLeftColor: role === roleOption
+                                  ? colors.primary
+                                  : 'transparent',
+                                borderBottomColor: colors.borderSecondary,
+                              },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.dropdownItemText,
+                                {
+                                  color: role === roleOption
+                                    ? colors.primary
+                                    : colors.text,
+                                  fontFamily: role === roleOption ? Fonts.semiBold : Fonts.regular,
+                                },
+                              ]}
+                            >
+                              {roleLabels[roleOption]}
+                            </Text>
+                            {role === roleOption && (
+                              <Text style={[styles.checkmark, { color: colors.primary }]}>✓</Text>
+                            )}
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  </TouchableOpacity>
+                </Modal>
               </View>
             ) : null}
 
             {/* Password Input */}
             <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: isDark ? '#D1D5DB' : '#374151' }]}>
+              <Text style={[styles.label, { color: colors.textSecondary, fontFamily: Fonts.medium }]}>
                 Password
               </Text>
               <TextInput
                 style={[
                   styles.input,
                   {
-                    backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
-                    borderColor: isDark ? '#374151' : '#E5E7EB',
-                    color: isDark ? '#1D1D1D' : '#111827',
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.inputBorder,
+                    color: colors.inputText,
+                    fontFamily: Fonts.regular,
                   },
                 ]}
                 placeholder="Create password"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.inputPlaceholder}
                 value={password}
                 onChangeText={(text) => {
                   setPassword(text);
@@ -309,20 +354,21 @@ export default function AdminRegisterScreen() {
 
             {/* Confirm Password Input */}
             <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: isDark ? '#D1D5DB' : '#374151' }]}>
+              <Text style={[styles.label, { color: colors.textSecondary, fontFamily: Fonts.medium }]}>
                 Confirm Password
               </Text>
               <TextInput
                 style={[
                   styles.input,
                   {
-                    backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
-                    borderColor: isDark ? '#374151' : '#E5E7EB',
-                    color: isDark ? '#1D1D1D' : '#111827',
+                    backgroundColor: colors.inputBackground,
+                    borderColor: colors.inputBorder,
+                    color: colors.inputText,
+                    fontFamily: Fonts.regular,
                   },
                 ]}
                 placeholder="Confirm password"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={colors.inputPlaceholder}
                 value={confirmPassword}
                 onChangeText={(text) => {
                   setConfirmPassword(text);
@@ -342,7 +388,7 @@ export default function AdminRegisterScreen() {
             style={[
               styles.registerButton, 
               { 
-                backgroundColor: isDark ? '#3B82F6' : '#2563EB',
+                backgroundColor: colors.primary,
                 opacity: loading ? 0.6 : 1,
               }
             ]}
@@ -350,9 +396,9 @@ export default function AdminRegisterScreen() {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#1D1D1D" />
+              <ActivityIndicator color={colors.textInverse} />
             ) : (
-              <Text style={styles.registerButtonText}>
+              <Text style={[styles.registerButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>
                 Register User
               </Text>
             )}
@@ -363,7 +409,7 @@ export default function AdminRegisterScreen() {
             onPress={() => router.back()}
             style={styles.backButton}
           >
-            <Text style={[styles.backButtonText, { color: isDark ? '#9CA3AF' : '#4B5563' }]}>
+            <Text style={[styles.backButtonText, { color: colors.textTertiary, fontFamily: Fonts.medium }]}>
               Back to Dashboard
             </Text>
           </TouchableOpacity>
@@ -395,12 +441,11 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   title: {
-    fontSize: 36,
-    fontWeight: 'bold',
+    fontSize: Fonts.sizes['4xl'],
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: Fonts.sizes.base,
   },
   form: {
     marginBottom: 24,
@@ -409,8 +454,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: Fonts.sizes.sm,
     marginBottom: 8,
   },
   input: {
@@ -419,37 +463,64 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderWidth: 1,
     borderRadius: 8,
-    fontSize: 16,
+    fontSize: Fonts.sizes.base,
   },
-  roleContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 8,
-  },
-  singleRoleContainer: {
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1,
-    marginTop: 8,
-  },
-  singleRoleText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  roleButton: {
-    flex: 1,
-    minWidth: '45%',
-    paddingVertical: 12,
+  dropdownButton: {
+    width: '100%',
     paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
     borderRadius: 8,
-    borderWidth: 2,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
   },
-  roleButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
+  dropdownButtonText: {
+    fontSize: Fonts.sizes.base,
+    flex: 1,
+  },
+  dropdownArrow: {
+    fontSize: 12,
+    marginLeft: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dropdownModal: {
+    width: '80%',
+    maxWidth: 400,
+    maxHeight: '60%',
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  dropdownTitle: {
+    fontSize: Fonts.sizes.lg,
+    padding: 16,
+    borderBottomWidth: 1,
+  },
+  dropdownList: {
+    maxHeight: 300,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderLeftWidth: 3,
+    borderBottomWidth: 1,
+  },
+  dropdownItemText: {
+    fontSize: Fonts.sizes.base,
+    flex: 1,
+  },
+  checkmark: {
+    fontSize: 18,
+    marginLeft: 8,
   },
   registerButton: {
     width: '100%',
@@ -468,17 +539,14 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   registerButtonText: {
-    color: '#1D1D1D',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: Fonts.sizes.base,
   },
   backButton: {
     alignItems: 'center',
     paddingVertical: 12,
   },
   backButtonText: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: Fonts.sizes.base,
   },
   errorContainer: {
     padding: 12,
@@ -486,7 +554,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   errorText: {
-    fontSize: 14,
+    fontSize: Fonts.sizes.sm,
     textAlign: 'center',
   },
 });

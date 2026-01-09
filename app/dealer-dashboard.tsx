@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, useColorScheme, Alert, ActivityIndicator, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, useColorScheme, Alert, ActivityIndicator, Image, Platform, Modal } from 'react-native';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as ImagePicker from 'expo-image-picker';
 import { getProducts, Product } from '@/services/productService';
 import { getUser, User } from '@/services/authService';
-import { createDealerRequest, getDealerRequests, DealerRequest } from '@/services/dealerRequestService';
+import { createDealerRequest, getDealerRequests, DealerRequest, getUpiId, uploadReceipt } from '@/services/dealerRequestService';
 
 export default function DealerDashboardScreen() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -16,6 +17,10 @@ export default function DealerDashboardScreen() {
   const [strips, setStrips] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showRequestForm, setShowRequestForm] = useState(false);
+  const [upiId, setUpiId] = useState<string>('');
+  const [uploadingReceipt, setUploadingReceipt] = useState<string | null>(null);
+  const [showUpiModal, setShowUpiModal] = useState(false);
+  const [newRequestId, setNewRequestId] = useState<string | null>(null);
 
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -24,7 +29,27 @@ export default function DealerDashboardScreen() {
     loadUser();
     loadProducts();
     loadRequests();
+    loadUpiId();
+    requestImagePermission();
   }, []);
+
+  const requestImagePermission = async () => {
+    if (Platform.OS !== 'web') {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Sorry, we need camera roll permissions to upload receipt images!');
+      }
+    }
+  };
+
+  const loadUpiId = async () => {
+    try {
+      const id = await getUpiId();
+      setUpiId(id);
+    } catch (err: any) {
+      console.error('Error loading UPI ID:', err);
+    }
+  };
 
   const loadUser = async () => {
     try {
@@ -92,23 +117,54 @@ export default function DealerDashboardScreen() {
     setSubmitting(true);
 
     try {
-      await createDealerRequest(selectedProduct.id, stripsNum);
-      Alert.alert('Success', 'Request submitted successfully!', [
-        {
-          text: 'OK',
-          onPress: () => {
-            setShowRequestForm(false);
-            setSelectedProduct(null);
-            setStrips('');
-            loadRequests();
-            loadProducts();
-          },
-        },
-      ]);
+      const response = await createDealerRequest(selectedProduct.id, stripsNum);
+      if (response.data?.request?.id) {
+        setNewRequestId(response.data.request.id);
+        setShowUpiModal(true);
+      }
+      setShowRequestForm(false);
+      setSelectedProduct(null);
+      setStrips('');
+      loadRequests();
+      loadProducts();
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to submit request');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleUploadReceipt = async (requestId: string) => {
+    console.log('Upload receipt - requestId:', requestId, 'type:', typeof requestId);
+    
+    if (!requestId || requestId === 'undefined' || requestId.trim() === '') {
+      Alert.alert('Error', 'Invalid request ID. Please refresh and try again.');
+      return;
+    }
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [3, 4],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setUploadingReceipt(requestId);
+        try {
+          await uploadReceipt(requestId, result.assets[0].uri);
+          Alert.alert('Success', 'Receipt uploaded successfully! Waiting for admin verification.');
+          loadRequests();
+        } catch (err: any) {
+          Alert.alert('Error', err.message || 'Failed to upload receipt');
+        } finally {
+          setUploadingReceipt(null);
+        }
+      }
+    } catch (err: any) {
+      console.error('Error picking image:', err);
+      setUploadingReceipt(null);
     }
   };
 
@@ -120,6 +176,32 @@ export default function DealerDashboardScreen() {
         return '#DC2626';
       default:
         return '#F59E0B';
+    }
+  };
+
+  const getPaymentStatusColor = (paymentStatus: string) => {
+    switch (paymentStatus) {
+      case 'verified':
+        return '#10B981';
+      case 'rejected':
+        return '#DC2626';
+      case 'paid':
+        return '#3B82F6';
+      default:
+        return '#9CA3AF';
+    }
+  };
+
+  const getPaymentStatusText = (paymentStatus: string) => {
+    switch (paymentStatus) {
+      case 'verified':
+        return 'Payment Verified';
+      case 'rejected':
+        return 'Payment Rejected';
+      case 'paid':
+        return 'Payment Pending Verification';
+      default:
+        return 'Payment Pending';
     }
   };
 
@@ -149,6 +231,51 @@ export default function DealerDashboardScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {/* UPI ID Modal */}
+        <Modal
+          visible={showUpiModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowUpiModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Payment Required</Text>
+              <Text style={styles.modalSubtitle}>
+                Please complete the payment to proceed with your request.
+              </Text>
+              
+              <View style={styles.upiCard}>
+                <Text style={styles.upiLabel}>UPI ID:</Text>
+                <Text style={styles.upiId} selectable>{upiId}</Text>
+                <TouchableOpacity
+                  style={styles.copyButton}
+                  onPress={() => {
+                    // Copy to clipboard (you can add clipboard functionality if needed)
+                    Alert.alert('UPI ID', `UPI ID: ${upiId}\n\nPlease copy this and make the payment.`);
+                  }}
+                >
+                  <Text style={styles.copyButtonText}>Copy UPI ID</Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.modalNote}>
+                After completing the payment, please upload the receipt from your requests below.
+              </Text>
+
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => {
+                  setShowUpiModal(false);
+                  setNewRequestId(null);
+                }}
+              >
+                <Text style={styles.modalButtonText}>Got it</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
         {/* Request Form Modal */}
         {showRequestForm && selectedProduct && (
           <View style={styles.requestFormContainer}>
@@ -220,30 +347,94 @@ export default function DealerDashboardScreen() {
               <Text style={styles.emptyText}>No requests yet. Request strips from products below.</Text>
             </View>
           ) : (
-            requests.map((request) => (
-              <View key={request.id} style={styles.requestCard}>
-                <View style={styles.requestHeader}>
-                  <Text style={styles.requestProductTitle}>{request.product.title}</Text>
-                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(request.status) }]}>
-                    <Text style={styles.statusText}>{request.status.toUpperCase()}</Text>
+            requests.map((request) => {
+              const totalValue = request.strips * request.product.packetsPerStrip * request.product.packetPrice;
+              const canUploadReceipt = request.status === 'pending' && 
+                (request.paymentStatus === 'pending' || request.paymentStatus === 'rejected');
+              
+              // Ensure we have a valid ID (handle both _id and id)
+              const requestId = (request as any).id || (request as any)._id || request.id;
+              
+              return (
+                <View key={requestId} style={styles.requestCard}>
+                  <View style={styles.requestHeader}>
+                    <Text style={styles.requestProductTitle}>{request.product.title}</Text>
+                    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(request.status) }]}>
+                      <Text style={styles.statusText}>{request.status.toUpperCase()}</Text>
+                    </View>
+                  </View>
+                  
+                  <View style={styles.requestDetails}>
+                    <Text style={styles.requestDetailText}>
+                      Requested: {request.strips} strips ({request.strips * request.product.packetsPerStrip} packets)
+                    </Text>
+                    <Text style={styles.requestDetailText}>
+                      Total Value: ₹{totalValue.toFixed(2)}
+                    </Text>
+                    <Text style={styles.requestDetailText}>
+                      Requested At: {new Date(request.requestedAt).toLocaleString()}
+                    </Text>
+                    {request.processedAt && (
+                      <Text style={styles.requestDetailText}>
+                        Processed At: {new Date(request.processedAt).toLocaleString()}
+                      </Text>
+                    )}
+                  </View>
+
+                  {/* Payment Status */}
+                  <View style={styles.paymentSection}>
+                    <View style={styles.paymentStatusRow}>
+                      <Text style={styles.paymentLabel}>Payment Status:</Text>
+                      <View style={[styles.paymentBadge, { backgroundColor: getPaymentStatusColor(request.paymentStatus) }]}>
+                        <Text style={styles.paymentStatusText}>
+                          {getPaymentStatusText(request.paymentStatus)}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {request.status === 'pending' && (
+                      <View style={styles.upiInfoCard}>
+                        <Text style={styles.upiInfoLabel}>Pay to UPI ID:</Text>
+                        <Text style={styles.upiInfoValue} selectable>{upiId}</Text>
+                      </View>
+                    )}
+
+                    {/* Receipt Upload Section */}
+                    {canUploadReceipt && (
+                      <TouchableOpacity
+                        style={styles.uploadButton}
+                        onPress={() => handleUploadReceipt(requestId)}
+                        disabled={uploadingReceipt === requestId}
+                      >
+                        {uploadingReceipt === requestId ? (
+                          <ActivityIndicator color="#FFFFFF" />
+                        ) : (
+                          <Text style={styles.uploadButtonText}>
+                            {request.paymentStatus === 'rejected' ? 'Upload New Receipt' : 'Upload Payment Receipt'}
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    )}
+
+                    {/* Receipt Image */}
+                    {request.receiptImage && (
+                      <View style={styles.receiptSection}>
+                        <Text style={styles.receiptLabel}>Receipt:</Text>
+                        <Image source={{ uri: request.receiptImage }} style={styles.receiptImage} />
+                      </View>
+                    )}
+
+                    {/* Payment Notes */}
+                    {request.paymentNotes && (
+                      <View style={styles.notesSection}>
+                        <Text style={styles.notesLabel}>Admin Notes:</Text>
+                        <Text style={styles.notesText}>{request.paymentNotes}</Text>
+                      </View>
+                    )}
                   </View>
                 </View>
-                
-                <View style={styles.requestDetails}>
-                  <Text style={styles.requestDetailText}>
-                    Requested: {request.strips} strips ({request.strips * request.product.packetsPerStrip} packets)
-                  </Text>
-                  <Text style={styles.requestDetailText}>
-                    Requested At: {new Date(request.requestedAt).toLocaleString()}
-                  </Text>
-                  {request.processedAt && (
-                    <Text style={styles.requestDetailText}>
-                      Processed At: {new Date(request.processedAt).toLocaleString()}
-                    </Text>
-                  )}
-                </View>
-              </View>
-            ))
+              );
+            })
           )}
         </View>
 
@@ -556,6 +747,172 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontFamily: 'Poppins-SemiBold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#1D1D1D',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: '#374151',
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontFamily: 'Poppins-Bold',
+    color: '#FFFFFF',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Light',
+    color: '#D1D5DB',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  upiCard: {
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#111827',
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  upiLabel: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Light',
+    color: '#9CA3AF',
+    marginBottom: 8,
+  },
+  upiId: {
+    fontSize: 18,
+    fontFamily: 'Poppins-Bold',
+    color: '#60A5FA',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  copyButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#3B82F6',
+  },
+  copyButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontFamily: 'Poppins-SemiBold',
+  },
+  modalNote: {
+    fontSize: 12,
+    fontFamily: 'Poppins-Light',
+    color: '#9CA3AF',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  modalButton: {
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#3B82F6',
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontFamily: 'Poppins-SemiBold',
+  },
+  paymentSection: {
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#374151',
+    gap: 12,
+  },
+  paymentStatusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  paymentLabel: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Medium',
+    color: '#D1D5DB',
+  },
+  paymentBadge: {
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+  },
+  paymentStatusText: {
+    fontSize: 12,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#FFFFFF',
+  },
+  upiInfoCard: {
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#111827',
+  },
+  upiInfoLabel: {
+    fontSize: 12,
+    fontFamily: 'Poppins-Light',
+    color: '#9CA3AF',
+    marginBottom: 4,
+  },
+  upiInfoValue: {
+    fontSize: 16,
+    fontFamily: 'Poppins-Bold',
+    color: '#60A5FA',
+  },
+  uploadButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#10B981',
+    alignItems: 'center',
+  },
+  uploadButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontFamily: 'Poppins-SemiBold',
+  },
+  receiptSection: {
+    marginTop: 8,
+  },
+  receiptLabel: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Medium',
+    color: '#D1D5DB',
+    marginBottom: 8,
+  },
+  receiptImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    backgroundColor: '#111827',
+  },
+  notesSection: {
+    marginTop: 8,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#111827',
+  },
+  notesLabel: {
+    fontSize: 12,
+    fontFamily: 'Poppins-Medium',
+    color: '#9CA3AF',
+    marginBottom: 4,
+  },
+  notesText: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Light',
+    color: '#D1D5DB',
   },
 });
 

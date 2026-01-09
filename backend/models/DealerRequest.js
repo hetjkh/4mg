@@ -21,6 +21,34 @@ const dealerRequestSchema = new mongoose.Schema({
     enum: ['pending', 'approved', 'cancelled'],
     default: 'pending',
   },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'paid', 'verified', 'rejected'],
+    default: 'pending',
+    comment: 'Payment status: pending (no payment), paid (receipt uploaded), verified (admin verified), rejected (admin rejected receipt)',
+  },
+  receiptImage: {
+    type: String,
+    trim: true,
+    default: null,
+    comment: 'URL of the payment receipt image uploaded by dealer',
+  },
+  paymentVerifiedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+    comment: 'Admin who verified/rejected the payment',
+  },
+  paymentVerifiedAt: {
+    type: Date,
+    default: null,
+  },
+  paymentNotes: {
+    type: String,
+    trim: true,
+    default: '',
+    comment: 'Admin notes about payment verification',
+  },
   requestedAt: {
     type: Date,
     default: Date.now,
@@ -41,6 +69,14 @@ const dealerRequestSchema = new mongoose.Schema({
   },
 }, {
   timestamps: true,
+  toJSON: {
+    transform: function(doc, ret) {
+      ret.id = ret._id;
+      delete ret._id;
+      delete ret.__v;
+      return ret;
+    }
+  }
 });
 
 // Index for faster queries

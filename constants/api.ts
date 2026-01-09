@@ -1,7 +1,7 @@
 // API Configuration
 // Change this to your computer's IP address when testing on physical device
 export const API_BASE_URL = __DEV__ 
-  ? 'http://172.21.52.192:3000/api' 
+  ? 'http://10.228.242.192:3000/api' 
   : 'https://your-production-api.com/api';
 
 export const API_ENDPOINTS = {
