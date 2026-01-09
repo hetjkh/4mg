@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, useColorScheme, Alert, ActivityIndicator, Image, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, useColorScheme, Alert, ActivityIndicator, Image, Platform, Modal } from 'react-native';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
-import { createProduct, getProducts, deleteProduct, Product } from '@/services/productService';
+import { createProduct, getProducts, deleteProduct, updateProduct, Product } from '@/services/productService';
 import { getUser, User } from '@/services/authService';
 import { uploadImage } from '@/services/uploadService';
 
@@ -12,17 +12,22 @@ export default function ProductsScreen() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   
   // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [price, setPrice] = useState('');
+  const [packetPrice, setPacketPrice] = useState('');
+  const [packetsPerStrip, setPacketsPerStrip] = useState('');
   const [image, setImage] = useState('');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [stock, setStock] = useState('');
   const [error, setError] = useState('');
+  const [showStockModal, setShowStockModal] = useState(false);
+  const [editingStockProduct, setEditingStockProduct] = useState<Product | null>(null);
+  const [newStockValue, setNewStockValue] = useState('');
 
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -68,6 +73,7 @@ export default function ProductsScreen() {
     }
   };
 
+
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -100,23 +106,59 @@ export default function ProductsScreen() {
     }
   };
 
+  const resetForm = () => {
+    setTitle('');
+    setDescription('');
+    setPacketPrice('');
+    setPacketsPerStrip('');
+    setImage('');
+    setImageUri(null);
+    setStock('');
+    setEditingProductId(null);
+    setError('');
+  };
+
+  const handleEdit = (product: Product) => {
+    setEditingProductId(product.id);
+    setTitle(product.title);
+    setDescription(product.description || '');
+    setPacketPrice(product.packetPrice.toString());
+    setPacketsPerStrip(product.packetsPerStrip.toString());
+    setImage(product.image);
+    setImageUri(product.image);
+    setStock(product.stock.toString());
+    setShowForm(true);
+    setError('');
+  };
+
+  const handleCancel = () => {
+    resetForm();
+    setShowForm(false);
+  };
+
   const handleSubmit = async () => {
     // Validation
-    if (!title.trim() || !price.trim() || !image.trim() || !stock.trim()) {
-      setError('Please fill in all required fields (title, price, image, stock)');
+    if (!title.trim() || !packetPrice.trim() || !packetsPerStrip.trim() || !image.trim() || !stock.trim()) {
+      setError('Please fill in all required fields (title, packet price, packets per strip, image, stock)');
       return;
     }
 
-    const priceNum = parseFloat(price);
+    const packetPriceNum = parseFloat(packetPrice);
+    const packetsPerStripNum = parseInt(packetsPerStrip, 10);
     const stockNum = parseInt(stock, 10);
 
-    if (isNaN(priceNum) || priceNum < 0) {
-      setError('Price must be a valid positive number');
+    if (isNaN(packetPriceNum) || packetPriceNum < 0) {
+      setError('Packet price must be a valid positive number');
+      return;
+    }
+
+    if (isNaN(packetsPerStripNum) || packetsPerStripNum < 1) {
+      setError('Packets per strip must be at least 1');
       return;
     }
 
     if (isNaN(stockNum) || stockNum < 0) {
-      setError('Stock must be a valid positive number');
+      setError('Stock must be a valid positive number (in strips)');
       return;
     }
 
@@ -124,27 +166,86 @@ export default function ProductsScreen() {
     setError('');
 
     try {
-      await createProduct(title.trim(), description.trim(), priceNum, image.trim(), stockNum);
-      Alert.alert('Success', 'Product created successfully!', [
-        {
-          text: 'OK',
-          onPress: () => {
-            setTitle('');
-            setDescription('');
-            setPrice('');
-            setImage('');
-            setImageUri(null);
-            setStock('');
-            setShowForm(false);
-            loadProducts();
+      if (editingProductId) {
+        // Update existing product
+        await updateProduct(
+          editingProductId,
+          title.trim(),
+          description.trim(),
+          packetPriceNum,
+          packetsPerStripNum,
+          image.trim(),
+          stockNum
+        );
+        Alert.alert('Success', 'Product updated successfully!', [
+          {
+            text: 'OK',
+            onPress: () => {
+              resetForm();
+              setShowForm(false);
+              loadProducts();
+            },
           },
-        },
-      ]);
+        ]);
+      } else {
+        // Create new product
+        await createProduct(title.trim(), description.trim(), packetPriceNum, packetsPerStripNum, image.trim(), stockNum);
+        Alert.alert('Success', 'Product created successfully!', [
+          {
+            text: 'OK',
+            onPress: () => {
+              resetForm();
+              setShowForm(false);
+              loadProducts();
+            },
+          },
+        ]);
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to create product');
-      Alert.alert('Error', err.message || 'Failed to create product');
+      setError(err.message || `Failed to ${editingProductId ? 'update' : 'create'} product`);
+      Alert.alert('Error', err.message || `Failed to ${editingProductId ? 'update' : 'create'} product`);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleQuickStockUpdate = (product: Product) => {
+    setEditingStockProduct(product);
+    setNewStockValue(product.stock.toString());
+    setShowStockModal(true);
+  };
+
+  const handleStockModalSubmit = async () => {
+    if (!editingStockProduct) return;
+
+    if (!newStockValue || newStockValue.trim() === '') {
+      Alert.alert('Error', 'Please enter a stock amount');
+      return;
+    }
+
+    const stockNum = parseInt(newStockValue.trim(), 10);
+    if (isNaN(stockNum) || stockNum < 0) {
+      Alert.alert('Error', 'Stock must be a valid positive number');
+      return;
+    }
+
+    try {
+      await updateProduct(
+        editingStockProduct.id,
+        editingStockProduct.title,
+        editingStockProduct.description,
+        editingStockProduct.packetPrice,
+        editingStockProduct.packetsPerStrip,
+        editingStockProduct.image,
+        stockNum
+      );
+      Alert.alert('Success', 'Stock updated successfully!');
+      setShowStockModal(false);
+      setEditingStockProduct(null);
+      setNewStockValue('');
+      loadProducts();
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to update stock');
     }
   };
 
@@ -171,13 +272,14 @@ export default function ProductsScreen() {
     );
   };
 
+
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: isDark ? '#111827' : '#FFFFFF' }]}>
-        <StatusBar style={isDark ? 'light' : 'dark'} />
+      <View style={styles.container}>
+        <StatusBar style="light" />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={isDark ? '#60A5FA' : '#2563EB'} />
-          <Text style={[styles.loadingText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+          <ActivityIndicator size="large" color="#60A5FA" />
+          <Text style={styles.loadingText}>
             Loading products...
           </Text>
         </View>
@@ -186,48 +288,56 @@ export default function ProductsScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? '#111827' : '#FFFFFF' }]}>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
+    <View style={styles.container}>
+      <StatusBar style="light" />
       
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: isDark ? '#1F2937' : '#F9FAFB', borderBottomColor: isDark ? '#374151' : '#E5E7EB' }]}>
+      <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={[styles.backButtonText, { color: isDark ? '#60A5FA' : '#2563EB' }]}>← Back</Text>
+          <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>Products</Text>
+        <Text style={styles.headerTitle}>Products</Text>
         <TouchableOpacity
-          onPress={() => setShowForm(!showForm)}
-          style={[styles.addButton, { backgroundColor: isDark ? '#3B82F6' : '#2563EB' }]}
+          onPress={() => {
+            if (showForm) {
+              handleCancel();
+            } else {
+              setShowForm(true);
+            }
+          }}
+          style={styles.addButton}
         >
           <Text style={styles.addButtonText}>{showForm ? 'Cancel' : '+ Add'}</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Add Product Form */}
+        {/* Add/Edit Product Form */}
         {showForm && (
-          <View style={[styles.formContainer, { backgroundColor: isDark ? '#1F2937' : '#F9FAFB' }]}>
-            <Text style={[styles.formTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>Add New Product</Text>
+          <View style={styles.formContainer}>
+            <Text style={styles.formTitle}>
+              {editingProductId ? 'Edit Product' : 'Add New Product'}
+            </Text>
             
             {error ? (
-              <View style={[styles.errorContainer, { backgroundColor: isDark ? '#7F1D1D' : '#FEE2E2' }]}>
-                <Text style={[styles.errorText, { color: isDark ? '#FCA5A5' : '#DC2626' }]}>{error}</Text>
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{error}</Text>
               </View>
             ) : null}
 
             <TextInput
-              style={[styles.input, { backgroundColor: isDark ? '#111827' : '#FFFFFF', borderColor: isDark ? '#374151' : '#E5E7EB', color: isDark ? '#FFFFFF' : '#111827' }]}
+              style={styles.input}
               placeholder="Product Title *"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor="#6B7280"
               value={title}
               onChangeText={(text) => { setTitle(text); setError(''); }}
               editable={!submitting}
             />
 
             <TextInput
-              style={[styles.input, styles.textArea, { backgroundColor: isDark ? '#111827' : '#FFFFFF', borderColor: isDark ? '#374151' : '#E5E7EB', color: isDark ? '#FFFFFF' : '#111827' }]}
+              style={[styles.input, styles.textArea]}
               placeholder="Description (optional)"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor="#6B7280"
               value={description}
               onChangeText={(text) => { setDescription(text); setError(''); }}
               multiline
@@ -237,7 +347,7 @@ export default function ProductsScreen() {
 
             {/* Image Picker */}
             <View style={styles.imagePickerContainer}>
-              <Text style={[styles.label, { color: isDark ? '#D1D5DB' : '#374151' }]}>
+              <Text style={styles.label}>
                 Product Image *
               </Text>
               
@@ -246,7 +356,7 @@ export default function ProductsScreen() {
                   <Image source={{ uri: imageUri }} style={styles.imagePreview} />
                   {uploadingImage && (
                     <View style={styles.uploadingOverlay}>
-                      <ActivityIndicator size="large" color="#FFFFFF" />
+                      <ActivityIndicator size="large" color="#1D1D1D" />
                       <Text style={styles.uploadingText}>Uploading...</Text>
                     </View>
                   )}
@@ -264,21 +374,18 @@ export default function ProductsScreen() {
                 </View>
               ) : (
                 <TouchableOpacity
-                  style={[styles.imagePickerButton, { 
-                    backgroundColor: isDark ? '#374151' : '#E5E7EB',
-                    borderColor: isDark ? '#4B5563' : '#D1D5DB',
-                  }]}
+                  style={styles.imagePickerButton}
                   onPress={pickImage}
                   disabled={submitting || uploadingImage}
                 >
                   {uploadingImage ? (
-                    <ActivityIndicator color={isDark ? '#60A5FA' : '#2563EB'} />
+                    <ActivityIndicator color="#2563EB" />
                   ) : (
                     <>
-                      <Text style={[styles.imagePickerText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                      <Text style={styles.imagePickerText}>
                         📷 Pick Image
                       </Text>
-                      <Text style={[styles.imagePickerHint, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                      <Text style={styles.imagePickerHint}>
                         Tap to select from gallery
                       </Text>
                     </>
@@ -290,11 +397,11 @@ export default function ProductsScreen() {
             <View style={styles.row}>
               <View style={styles.halfInput}>
                 <TextInput
-                  style={[styles.input, { backgroundColor: isDark ? '#111827' : '#FFFFFF', borderColor: isDark ? '#374151' : '#E5E7EB', color: isDark ? '#FFFFFF' : '#111827' }]}
-                  placeholder="Price *"
-                  placeholderTextColor="#9CA3AF"
-                  value={price}
-                  onChangeText={(text) => { setPrice(text); setError(''); }}
+                  style={styles.input}
+                  placeholder="Packet Price (₹) *"
+                  placeholderTextColor="#6B7280"
+                  value={packetPrice}
+                  onChangeText={(text) => { setPacketPrice(text); setError(''); }}
                   keyboardType="decimal-pad"
                   editable={!submitting}
                 />
@@ -302,26 +409,38 @@ export default function ProductsScreen() {
 
               <View style={styles.halfInput}>
                 <TextInput
-                  style={[styles.input, { backgroundColor: isDark ? '#111827' : '#FFFFFF', borderColor: isDark ? '#374151' : '#E5E7EB', color: isDark ? '#FFFFFF' : '#111827' }]}
-                  placeholder="Stock *"
-                  placeholderTextColor="#9CA3AF"
-                  value={stock}
-                  onChangeText={(text) => { setStock(text); setError(''); }}
+                  style={styles.input}
+                  placeholder="Packets per Strip *"
+                  placeholderTextColor="#6B7280"
+                  value={packetsPerStrip}
+                  onChangeText={(text) => { setPacketsPerStrip(text); setError(''); }}
                   keyboardType="number-pad"
                   editable={!submitting}
                 />
               </View>
             </View>
 
+            <TextInput
+              style={styles.input}
+              placeholder="Stock (in strips) *"
+              placeholderTextColor="#6B7280"
+              value={stock}
+              onChangeText={(text) => { setStock(text); setError(''); }}
+              keyboardType="number-pad"
+              editable={!submitting}
+            />
+
             <TouchableOpacity
-              style={[styles.submitButton, { backgroundColor: isDark ? '#3B82F6' : '#2563EB', opacity: submitting ? 0.6 : 1 }]}
+              style={[styles.submitButton, { opacity: submitting ? 0.6 : 1 }]}
               onPress={handleSubmit}
               disabled={submitting}
             >
               {submitting ? (
-                <ActivityIndicator color="#FFFFFF" />
+                <ActivityIndicator color="#1D1D1D" />
               ) : (
-                <Text style={styles.submitButtonText}>Create Product</Text>
+                <Text style={styles.submitButtonText}>
+                  {editingProductId ? 'Update Product' : 'Create Product'}
+                </Text>
               )}
             </TouchableOpacity>
           </View>
@@ -329,60 +448,133 @@ export default function ProductsScreen() {
 
         {/* Products List */}
         <View style={styles.productsContainer}>
-          <Text style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+          <Text style={styles.sectionTitle}>
             All Products ({products.length})
           </Text>
 
           {products.length === 0 ? (
             <View style={styles.emptyContainer}>
-              <Text style={[styles.emptyText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+              <Text style={styles.emptyText}>
                 No products yet. Add your first product!
               </Text>
             </View>
           ) : (
             products.map((product) => (
-              <View key={product.id} style={[styles.productCard, { backgroundColor: isDark ? '#1F2937' : '#F9FAFB', borderColor: isDark ? '#374151' : '#E5E7EB' }]}>
+              <View key={product.id} style={styles.productCard}>
                 {product.image ? (
                   <Image source={{ uri: product.image }} style={styles.productImage} />
                 ) : (
-                  <View style={[styles.productImagePlaceholder, { backgroundColor: isDark ? '#374151' : '#E5E7EB' }]}>
-                    <Text style={[styles.placeholderText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>No Image</Text>
+                  <View style={styles.productImagePlaceholder}>
+                    <Text style={styles.placeholderText}>No Image</Text>
                   </View>
                 )}
                 
                 <View style={styles.productInfo}>
-                  <Text style={[styles.productTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>{product.title}</Text>
+                  <Text style={styles.productTitle}>{product.title}</Text>
                   {product.description ? (
-                    <Text style={[styles.productDescription, { color: isDark ? '#9CA3AF' : '#6B7280' }]} numberOfLines={2}>
+                    <Text style={styles.productDescription} numberOfLines={2}>
                       {product.description}
                     </Text>
                   ) : null}
                   
                   <View style={styles.productDetails}>
                     <View style={styles.detailItem}>
-                      <Text style={[styles.detailLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Price:</Text>
-                      <Text style={[styles.detailValue, { color: isDark ? '#FFFFFF' : '#111827' }]}>${product.price.toFixed(2)}</Text>
+                      <Text style={styles.detailLabel}>Packet Price:</Text>
+                      <Text style={styles.detailValue}>₹{product.packetPrice.toFixed(2)}</Text>
                     </View>
                     <View style={styles.detailItem}>
-                      <Text style={[styles.detailLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>Stock:</Text>
-                      <Text style={[styles.detailValue, { color: product.stock > 0 ? (isDark ? '#10B981' : '#059669') : (isDark ? '#EF4444' : '#DC2626') }]}>
-                        {product.stock} units
+                      <Text style={styles.detailLabel}>Per Strip:</Text>
+                      <Text style={styles.detailValue}>{product.packetsPerStrip} packets</Text>
+                    </View>
+                    <View style={styles.detailItem}>
+                      <Text style={styles.detailLabel}>Stock:</Text>
+                      <Text style={[styles.detailValue, { color: product.stock > 0 ? '#059669' : '#DC2626' }]}>
+                        {product.stock} strips
                       </Text>
                     </View>
                   </View>
 
-                  <TouchableOpacity
-                    style={[styles.deleteButton, { backgroundColor: '#DC2626' }]}
-                    onPress={() => handleDelete(product.id, product.title)}
-                  >
-                    <Text style={styles.deleteButtonText}>Delete</Text>
-                  </TouchableOpacity>
+                  <View style={styles.productActions}>
+                    <TouchableOpacity
+                      style={styles.editButton}
+                      onPress={() => handleEdit(product)}
+                    >
+                      <Text style={styles.editButtonText}>Edit</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      style={styles.stockButton}
+                      onPress={() => handleQuickStockUpdate(product)}
+                    >
+                      <Text style={styles.stockButtonText}>Stock</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => handleDelete(product.id, product.title)}
+                    >
+                      <Text style={styles.deleteButtonText}>Delete</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             ))
           )}
         </View>
       </ScrollView>
+
+      {/* Stock Update Modal */}
+      <Modal
+        visible={showStockModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowStockModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>
+              Update Stock
+            </Text>
+            {editingStockProduct && (
+              <Text style={styles.modalSubtitle}>
+                {editingStockProduct.title}
+              </Text>
+            )}
+            <Text style={styles.modalLabel}>
+              Current stock: {editingStockProduct?.stock} units
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Enter new stock amount"
+              placeholderTextColor="#6B7280"
+              value={newStockValue}
+              onChangeText={setNewStockValue}
+              keyboardType="number-pad"
+              autoFocus
+            />
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalCancelButton]}
+                onPress={() => {
+                  setShowStockModal(false);
+                  setEditingStockProduct(null);
+                  setNewStockValue('');
+                }}
+              >
+                <Text style={styles.modalCancelButtonText}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalSubmitButton]}
+                onPress={handleStockModalSubmit}
+              >
+                <Text style={styles.modalButtonText}>Update</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -390,15 +582,19 @@ export default function ProductsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#000000',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#000000',
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
+    fontFamily: 'Poppins-Light',
+    color: '#1D1D1D',
   },
   header: {
     flexDirection: 'row',
@@ -407,17 +603,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
+    borderBottomColor: '#1F1F1F',
+    backgroundColor: '#000000',
   },
   backButton: {
     padding: 8,
   },
   backButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins-SemiBold',
+    color: '#60A5FA',
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins-Bold',
+    color: '#1D1D1D',
     flex: 1,
     textAlign: 'center',
   },
@@ -425,14 +625,16 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
+    backgroundColor: '#3B82F6',
   },
   addButtonText: {
-    color: '#FFFFFF',
+    color: '#1D1D1D',
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Poppins-SemiBold',
   },
   scrollView: {
     flex: 1,
+    backgroundColor: '#000000',
   },
   scrollContent: {
     padding: 16,
@@ -441,15 +643,18 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     marginBottom: 24,
+    backgroundColor: '#E5E7EB',
   },
   formTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins-Bold',
+    color: '#111827',
     marginBottom: 16,
   },
   label: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Poppins-Medium',
+    color: '#111827',
     marginBottom: 8,
   },
   imagePickerContainer: {
@@ -463,14 +668,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: 120,
+    backgroundColor: '#E5E7EB',
+    borderColor: '#9CA3AF',
   },
   imagePickerText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins-SemiBold',
+    color: '#111827',
     marginBottom: 4,
   },
   imagePickerHint: {
     fontSize: 12,
+    fontFamily: 'Poppins-Light',
+    color: '#6B7280',
   },
   imagePreviewContainer: {
     position: 'relative',
@@ -494,7 +704,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   uploadingText: {
-    color: '#FFFFFF',
+    color: '#1D1D1D',
     marginTop: 8,
     fontSize: 14,
   },
@@ -507,7 +717,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   removeImageText: {
-    color: '#FFFFFF',
+    color: '#1D1D1D',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -518,6 +728,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     marginBottom: 12,
+    backgroundColor: '#D1D5DB',
+    borderColor: '#9CA3AF',
+    color: '#111827',
+    fontFamily: 'Poppins-Light',
   },
   textArea: {
     minHeight: 80,
@@ -536,27 +750,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8,
+    backgroundColor: '#3B82F6',
   },
   submitButtonText: {
-    color: '#FFFFFF',
+    color: '#1D1D1D',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins-SemiBold',
   },
   errorContainer: {
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
+    backgroundColor: '#FEE2E2',
   },
   errorText: {
     fontSize: 14,
+    fontFamily: 'Poppins-Light',
     textAlign: 'center',
+    color: '#DC2626',
   },
   productsContainer: {
     gap: 16,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins-Bold',
+    color: '#FFFFFF',
     marginBottom: 12,
   },
   emptyContainer: {
@@ -565,7 +784,9 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
+    fontFamily: 'Poppins-Light',
     textAlign: 'center',
+    color: '#9CA3AF',
   },
   productCard: {
     flexDirection: 'row',
@@ -573,12 +794,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     gap: 12,
+    backgroundColor: '#1D1D1D',
+    borderColor: '#374151',
   },
   productImage: {
     width: 100,
     height: 100,
     borderRadius: 8,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: '#D1D5DB',
   },
   productImagePlaceholder: {
     width: 100,
@@ -586,9 +809,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#D1D5DB',
   },
   placeholderText: {
     fontSize: 12,
+    fontFamily: 'Poppins-Light',
+    color: '#9CA3AF',
   },
   productInfo: {
     flex: 1,
@@ -596,10 +822,13 @@ const styles = StyleSheet.create({
   },
   productTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins-Bold',
+    color: '#FFFFFF',
   },
   productDescription: {
     fontSize: 14,
+    fontFamily: 'Poppins-Light',
+    color: '#D1D5DB',
   },
   productDetails: {
     flexDirection: 'row',
@@ -612,22 +841,123 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 14,
+    fontFamily: 'Poppins-Light',
+    color: '#D1D5DB',
   },
   detailValue: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Poppins-SemiBold',
+    color: '#FFFFFF',
+  },
+  productActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+    flexWrap: 'wrap',
+  },
+  editButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    backgroundColor: '#2563EB',
+  },
+  editButtonText: {
+    color: '#1D1D1D',
+    fontSize: 14,
+    fontFamily: 'Poppins-SemiBold',
+  },
+  stockButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    backgroundColor: '#10B981',
+  },
+  stockButtonText: {
+    color: '#1D1D1D',
+    fontSize: 14,
+    fontFamily: 'Poppins-SemiBold',
   },
   deleteButton: {
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 6,
-    alignSelf: 'flex-start',
-    marginTop: 8,
+    backgroundColor: '#DC2626',
   },
   deleteButtonText: {
-    color: '#FFFFFF',
+    color: '#1D1D1D',
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Poppins-SemiBold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 12,
+    padding: 24,
+    gap: 16,
+    backgroundColor: '#E5E7EB',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontFamily: 'Poppins-Bold',
+    color: '#111827',
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    fontFamily: 'Poppins-Medium',
+    color: '#6B7280',
+  },
+  modalLabel: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Light',
+    color: '#111827',
+    marginTop: 4,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 16,
+    marginTop: 8,
+    backgroundColor: '#D1D5DB',
+    borderColor: '#9CA3AF',
+    color: '#111827',
+    fontFamily: 'Poppins-Light',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelButton: {
+    backgroundColor: '#9CA3AF',
+  },
+  modalSubmitButton: {
+    backgroundColor: '#10B981',
+  },
+  modalButtonText: {
+    color: '#1D1D1D',
+    fontSize: 16,
+    fontFamily: 'Poppins-SemiBold',
+  },
+  modalCancelButtonText: {
+    color: '#1D1D1D',
+    fontSize: 16,
+    fontFamily: 'Poppins-SemiBold',
   },
 });
 

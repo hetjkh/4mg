@@ -155,7 +155,23 @@ router.post('/register', verifyToken, async (req, res) => {
     }
 
     // Create new user
-    const user = new User({ name, email, password, role });
+    const userData = { name, email, password, role };
+    
+    // Set createdBy based on who is creating and what role
+    if (currentUser.role === 'admin') {
+      // Admin can create any role, set createdBy to admin
+      if (role === 'stalkist' || role === 'dealer' || role === 'dellear' || role === 'salesman') {
+        userData.createdBy = currentUser._id;
+      }
+    } else if (currentUser.role === 'dellear' && role === 'salesman') {
+      // Dealer creating salesman
+      userData.createdBy = currentUser._id;
+    } else if (currentUser.role === 'stalkist' && role === 'dellear') {
+      // Stalkist creating dellear
+      userData.createdBy = currentUser._id;
+    }
+    
+    const user = new User(userData);
     await user.save();
 
     res.status(201).json({

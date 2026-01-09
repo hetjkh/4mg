@@ -11,10 +11,15 @@ const productSchema = new mongoose.Schema({
     trim: true,
     default: '',
   },
-  price: {
+  packetPrice: {
     type: Number,
-    required: [true, 'Product price is required'],
+    required: [true, 'Packet price is required'],
     min: [0, 'Price must be positive'],
+  },
+  packetsPerStrip: {
+    type: Number,
+    required: [true, 'Packets per strip is required'],
+    min: [1, 'Must have at least 1 packet per strip'],
   },
   image: {
     type: String,
@@ -26,6 +31,7 @@ const productSchema = new mongoose.Schema({
     required: [true, 'Stock quantity is required'],
     min: [0, 'Stock cannot be negative'],
     default: 0,
+    comment: 'Stock in strips (not packets)',
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,

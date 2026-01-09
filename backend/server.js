@@ -43,6 +43,12 @@ mongoose.connection.on('reconnected', () => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/products', require('./routes/products'));
 app.use('/api/upload', require('./routes/upload'));
+app.use('/api/dealer-requests', require('./routes/dealerRequests'));
+app.use('/api/salesmen', require('./routes/salesmen'));
+app.use('/api/dealers', require('./routes/dealers'));
+app.use('/api/admin/dealers', require('./routes/adminDealers'));
+app.use('/api/admin/users', require('./routes/adminUsers'));
+app.use('/api/stalkists', require('./routes/stalkists'));
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -60,6 +66,6 @@ const HOST = '0.0.0.0'; // Listen on all interfaces
 app.listen(PORT, HOST, () => {
   console.log(`Server running on http://${HOST}:${PORT}`);
   console.log(`Local access: http://localhost:${PORT}`);
-  console.log(`Network access: http://10.44.1.66:${PORT}`);
+  console.log(`Network access: http://172.21.52.192:${PORT}`);
 });
 

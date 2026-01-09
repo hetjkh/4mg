@@ -100,6 +100,22 @@ export default function AdminRegisterScreen() {
               setPassword('');
               setConfirmPassword('');
               setRole('salesman');
+              // If dealer created a salesman, go back to manage salesmen page
+              if (currentUserRole === 'dellear' || currentUserRole === 'dealer') {
+                router.push('/manage-salesmen');
+              }
+              // If stalkist created a dealer, go back to manage dealers page
+              if (currentUserRole === 'stalkist') {
+                router.push('/manage-dealers');
+              }
+              // If admin created a dealer, go back to manage dealers page
+              if (currentUserRole === 'admin' && (role === 'dealer' || role === 'dellear')) {
+                router.push('/manage-admin-dealers');
+              }
+              // If admin created a stalkist, go back to manage stalkists page
+              if (currentUserRole === 'admin' && role === 'stalkist') {
+                router.push('/manage-stalkists');
+              }
             },
           },
         ]);
@@ -115,7 +131,7 @@ export default function AdminRegisterScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={[styles.container, { backgroundColor: isDark ? '#111827' : '#FFFFFF' }]}
+      style={[styles.container, { backgroundColor: isDark ? '#111827' : '#1D1D1D' }]}
     >
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <ScrollView
@@ -126,7 +142,7 @@ export default function AdminRegisterScreen() {
         <View style={styles.contentWrapper}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={[styles.title, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+            <Text style={[styles.title, { color: isDark ? '#1D1D1D' : '#111827' }]}>
               Register New User
             </Text>
             <Text style={[styles.subtitle, { color: isDark ? '#9CA3AF' : '#4B5563' }]}>
@@ -156,7 +172,7 @@ export default function AdminRegisterScreen() {
                   {
                     backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
                     borderColor: isDark ? '#374151' : '#E5E7EB',
-                    color: isDark ? '#FFFFFF' : '#111827',
+                    color: isDark ? '#1D1D1D' : '#111827',
                   },
                 ]}
                 placeholder="Enter full name"
@@ -183,7 +199,7 @@ export default function AdminRegisterScreen() {
                   {
                     backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
                     borderColor: isDark ? '#374151' : '#E5E7EB',
-                    color: isDark ? '#FFFFFF' : '#111827',
+                    color: isDark ? '#1D1D1D' : '#111827',
                   },
                 ]}
                 placeholder="Enter email"
@@ -218,7 +234,7 @@ export default function AdminRegisterScreen() {
                     backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
                     borderColor: isDark ? '#374151' : '#E5E7EB',
                   }]}>
-                    <Text style={[styles.singleRoleText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                    <Text style={[styles.singleRoleText, { color: isDark ? '#1D1D1D' : '#111827' }]}>
                       {roleLabels[allowedRoles[0]]}
                     </Text>
                   </View>
@@ -249,7 +265,7 @@ export default function AdminRegisterScreen() {
                             styles.roleButtonText,
                             {
                               color: role === roleOption
-                                ? '#FFFFFF'
+                                ? '#1D1D1D'
                                 : (isDark ? '#D1D5DB' : '#374151'),
                             },
                           ]}
@@ -274,7 +290,7 @@ export default function AdminRegisterScreen() {
                   {
                     backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
                     borderColor: isDark ? '#374151' : '#E5E7EB',
-                    color: isDark ? '#FFFFFF' : '#111827',
+                    color: isDark ? '#1D1D1D' : '#111827',
                   },
                 ]}
                 placeholder="Create password"
@@ -302,7 +318,7 @@ export default function AdminRegisterScreen() {
                   {
                     backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
                     borderColor: isDark ? '#374151' : '#E5E7EB',
-                    color: isDark ? '#FFFFFF' : '#111827',
+                    color: isDark ? '#1D1D1D' : '#111827',
                   },
                 ]}
                 placeholder="Confirm password"
@@ -334,7 +350,7 @@ export default function AdminRegisterScreen() {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color="#1D1D1D" />
             ) : (
               <Text style={styles.registerButtonText}>
                 Register User
@@ -452,7 +468,7 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   registerButtonText: {
-    color: '#FFFFFF',
+    color: '#1D1D1D',
     fontSize: 16,
     fontWeight: '600',
   },

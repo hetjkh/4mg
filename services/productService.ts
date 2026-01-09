@@ -7,9 +7,10 @@ export interface Product {
   id: string;
   title: string;
   description: string;
-  price: number;
+  packetPrice: number;
+  packetsPerStrip: number;
   image: string;
-  stock: number;
+  stock: number; // Stock in strips
   createdBy?: {
     id: string;
     name: string;
@@ -106,7 +107,8 @@ export const getProduct = async (id: string): Promise<Product> => {
 export const createProduct = async (
   title: string,
   description: string,
-  price: number,
+  packetPrice: number,
+  packetsPerStrip: number,
   image: string,
   stock: number
 ): Promise<ProductResponse> => {
@@ -122,7 +124,7 @@ export const createProduct = async (
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify({ title, description, price, image, stock }),
+      body: JSON.stringify({ title, description, packetPrice, packetsPerStrip, image, stock }),
     });
 
     const data = await response.json();
@@ -146,7 +148,8 @@ export const updateProduct = async (
   id: string,
   title: string,
   description: string,
-  price: number,
+  packetPrice: number,
+  packetsPerStrip: number,
   image: string,
   stock: number
 ): Promise<ProductResponse> => {
@@ -162,7 +165,7 @@ export const updateProduct = async (
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify({ title, description, price, image, stock }),
+      body: JSON.stringify({ title, description, packetPrice, packetsPerStrip, image, stock }),
     });
 
     const data = await response.json();

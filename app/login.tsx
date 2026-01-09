@@ -55,9 +55,9 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={[styles.container, { backgroundColor: isDark ? '#111827' : '#FFFFFF' }]}
+      style={styles.container}
     >
-      <StatusBar style={isDark ? 'light' : 'dark'} />
+      <StatusBar style="light" />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -66,18 +66,18 @@ export default function LoginScreen() {
         <View style={styles.contentWrapper}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={[styles.title, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+            <Text style={styles.title}>
               Welcome Back
             </Text>
-            <Text style={[styles.subtitle, { color: isDark ? '#9CA3AF' : '#4B5563' }]}>
+            <Text style={styles.subtitle}>
               Sign in to continue
             </Text>
           </View>
 
           {/* Error Message */}
           {error ? (
-            <View style={[styles.errorContainer, { backgroundColor: isDark ? '#7F1D1D' : '#FEE2E2' }]}>
-              <Text style={[styles.errorText, { color: isDark ? '#FCA5A5' : '#DC2626' }]}>
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>
                 {error}
               </Text>
             </View>
@@ -87,16 +87,16 @@ export default function LoginScreen() {
           <View style={styles.form}>
             {/* Email Input */}
             <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: isDark ? '#D1D5DB' : '#374151' }]}>
+              <Text style={styles.label}>
                 Email
               </Text>
               <TextInput
                 style={[
                   styles.input,
                   {
-                    backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
-                    borderColor: isDark ? '#374151' : '#E5E7EB',
-                    color: isDark ? '#FFFFFF' : '#111827',
+                    backgroundColor: '#D1D5DB',
+                    borderColor: '#9CA3AF',
+                    color: '#111827',
                   },
                 ]}
                 placeholder="Enter your email"
@@ -115,16 +115,16 @@ export default function LoginScreen() {
 
             {/* Password Input */}
             <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: isDark ? '#D1D5DB' : '#374151' }]}>
+              <Text style={styles.label}>
                 Password
               </Text>
               <TextInput
                 style={[
                   styles.input,
                   {
-                    backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
-                    borderColor: isDark ? '#374151' : '#E5E7EB',
-                    color: isDark ? '#FFFFFF' : '#111827',
+                    backgroundColor: '#D1D5DB',
+                    borderColor: '#9CA3AF',
+                    color: '#111827',
                   },
                 ]}
                 placeholder="Enter your password"
@@ -143,7 +143,7 @@ export default function LoginScreen() {
 
             {/* Role Selection */}
             <View style={styles.inputContainer}>
-              <Text style={[styles.label, { color: isDark ? '#D1D5DB' : '#374151' }]}>
+              <Text style={styles.label}>
                 Role
               </Text>
               <View style={styles.roleContainer}>
@@ -158,11 +158,11 @@ export default function LoginScreen() {
                       styles.roleButton,
                       {
                         backgroundColor: role === roleOption.value
-                          ? (isDark ? '#3B82F6' : '#2563EB')
-                          : (isDark ? '#374151' : '#E5E7EB'),
+                          ? '#3B82F6'
+                          : '#D1D5DB',
                         borderColor: role === roleOption.value
-                          ? (isDark ? '#60A5FA' : '#2563EB')
-                          : (isDark ? '#4B5563' : '#D1D5DB'),
+                          ? '#60A5FA'
+                          : '#9CA3AF',
                       },
                     ]}
                     disabled={loading}
@@ -172,8 +172,8 @@ export default function LoginScreen() {
                         styles.roleButtonText,
                         {
                           color: role === roleOption.value
-                            ? '#FFFFFF'
-                            : (isDark ? '#D1D5DB' : '#374151'),
+                            ? '#1D1D1D'
+                            : '#111827',
                         },
                       ]}
                     >
@@ -186,7 +186,7 @@ export default function LoginScreen() {
 
             {/* Forgot Password */}
             <TouchableOpacity style={styles.forgotPassword} disabled={loading}>
-              <Text style={[styles.forgotPasswordText, { color: isDark ? '#60A5FA' : '#2563EB' }]}>
+              <Text style={styles.forgotPasswordText}>
                 Forgot Password?
               </Text>
             </TouchableOpacity>
@@ -198,7 +198,7 @@ export default function LoginScreen() {
             style={[
               styles.loginButton, 
               { 
-                backgroundColor: isDark ? '#3B82F6' : '#2563EB',
+                backgroundColor: '#3B82F6',
                 opacity: loading ? 0.6 : 1,
               }
             ]}
@@ -206,7 +206,7 @@ export default function LoginScreen() {
             disabled={loading}
           >
             {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
+              <ActivityIndicator color="#1D1D1D" />
             ) : (
               <Text style={styles.loginButtonText}>
                 Sign In
@@ -216,19 +216,19 @@ export default function LoginScreen() {
 
           {/* Divider */}
           <View style={styles.divider}>
-            <View style={[styles.dividerLine, { backgroundColor: isDark ? '#374151' : '#D1D5DB' }]} />
-            <Text style={[styles.dividerText, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>OR</Text>
-            <View style={[styles.dividerLine, { backgroundColor: isDark ? '#374151' : '#D1D5DB' }]} />
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>OR</Text>
+            <View style={styles.dividerLine} />
           </View>
 
           {/* Register Link */}
           <View style={styles.registerContainer}>
-            <Text style={[styles.registerText, { color: isDark ? '#9CA3AF' : '#4B5563' }]}>
+            <Text style={styles.registerText}>
               Don't have an account?{' '}
             </Text>
             <Link href="/register" asChild>
               <TouchableOpacity>
-                <Text style={[styles.registerLink, { color: isDark ? '#60A5FA' : '#2563EB' }]}>
+                <Text style={styles.registerLink}>
                   Sign Up
                 </Text>
               </TouchableOpacity>
@@ -243,6 +243,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#000000',
   },
   scrollView: {
     flex: 1,
@@ -263,11 +264,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 36,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins-Bold',
+    color: '#1D1D1D',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
+    fontFamily: 'Poppins-Light',
+    color: '#9CA3AF',
   },
   form: {
     marginBottom: 24,
@@ -277,7 +281,8 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Poppins-Medium',
+    color: '#D1D5DB',
     marginBottom: 8,
   },
   input: {
@@ -294,7 +299,8 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Poppins-Medium',
+    color: '#60A5FA',
   },
   loginButton: {
     width: '100%',
@@ -313,9 +319,9 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   loginButtonText: {
-    color: '#FFFFFF',
+    color: '#1D1D1D',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins-SemiBold',
   },
   divider: {
     flexDirection: 'row',
@@ -325,10 +331,13 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
+    backgroundColor: '#374151',
   },
   dividerText: {
     paddingHorizontal: 16,
     fontSize: 14,
+    fontFamily: 'Poppins-Light',
+    color: '#9CA3AF',
   },
   registerContainer: {
     flexDirection: 'row',
@@ -337,19 +346,25 @@ const styles = StyleSheet.create({
   },
   registerText: {
     fontSize: 16,
+    fontFamily: 'Poppins-Light',
+    color: '#9CA3AF',
   },
   registerLink: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins-SemiBold',
+    color: '#60A5FA',
   },
   errorContainer: {
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
+    backgroundColor: '#FEE2E2',
   },
   errorText: {
     fontSize: 14,
+    fontFamily: 'Poppins-Light',
     textAlign: 'center',
+    color: '#DC2626',
   },
   roleContainer: {
     flexDirection: 'row',
@@ -369,7 +384,7 @@ const styles = StyleSheet.create({
   },
   roleButtonText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Poppins-SemiBold',
   },
 });
 

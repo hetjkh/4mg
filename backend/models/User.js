@@ -26,6 +26,12 @@ const userSchema = new mongoose.Schema({
     enum: ['admin', 'stalkist', 'dellear', 'salesman'],
     default: 'salesman',
   },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null,
+    comment: 'ID of the user who created this user (dealer creates salesman)',
+  },
 }, {
   timestamps: true,
 });

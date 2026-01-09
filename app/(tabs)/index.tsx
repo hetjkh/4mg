@@ -22,53 +22,46 @@ export default function HomeScreen() {
   const [userCounts, setUserCounts] = useState<UserCounts | null>(null);
   const [loadingCounts, setLoadingCounts] = useState(false);
 
-  const loadUser = async () => {
-    try {
-      const user = await getUser();
-      console.log('Loaded user:', user);
-      console.log('User role:', user?.role);
-      setCurrentUser(user);
-    } catch (error) {
-      console.error('Error loading user:', error);
-      setCurrentUser(null);
-    }
-  };
-
-  const loadUserCounts = async () => {
-    if (currentUser?.role !== 'admin') {
-      setUserCounts(null);
-      return;
-    }
-
+  const loadUserCounts = React.useCallback(async () => {
     try {
       setLoadingCounts(true);
       const counts = await getUserCounts();
       setUserCounts(counts);
     } catch (error) {
       console.error('Error loading user counts:', error);
+      setUserCounts(null);
     } finally {
       setLoadingCounts(false);
     }
-  };
+  }, []);
+
+  const loadUser = React.useCallback(async () => {
+    try {
+      const user = await getUser();
+      setCurrentUser(user);
+      
+      // Load counts if user is admin
+      if (user?.role === 'admin') {
+        loadUserCounts();
+      } else {
+        setUserCounts(null);
+      }
+    } catch (error) {
+      console.error('Error loading user:', error);
+      setCurrentUser(null);
+      setUserCounts(null);
+    }
+  }, [loadUserCounts]);
 
   React.useEffect(() => {
     loadUser();
-  }, []);
-
-  React.useEffect(() => {
-    if (currentUser?.role === 'admin') {
-      loadUserCounts();
-    }
-  }, [currentUser]);
+  }, [loadUser]);
 
   // Reload user when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       loadUser();
-      if (currentUser?.role === 'admin') {
-        loadUserCounts();
-      }
-    }, [currentUser])
+    }, [loadUser])
   );
 
   const handleLogout = async () => {
@@ -96,17 +89,17 @@ export default function HomeScreen() {
 
   const renderDrawerContent = () => {
     return (
-      <View style={[styles.drawerContent, { backgroundColor: isDark ? '#111827' : '#FFFFFF' }]}>
+      <View style={styles.drawerContent}>
         <View style={styles.drawerHeader}>
-          <Text style={[styles.drawerTitle, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+          <Text style={styles.drawerTitle}>
             Menu
           </Text>
           {currentUser && (
             <View style={styles.drawerUserInfo}>
-              <Text style={[styles.drawerUserName, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+              <Text style={styles.drawerUserName}>
                 {currentUser.name}
               </Text>
-              <Text style={[styles.drawerUserEmail, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+              <Text style={styles.drawerUserEmail}>
                 {currentUser.email}
               </Text>
               <View style={[styles.drawerRoleBadge, {
@@ -129,20 +122,16 @@ export default function HomeScreen() {
               currentUser.role === 'stalkist' || 
               currentUser.role === 'dellear'
             );
-            console.log('Can register check:', {
-              currentUser: currentUser?.role,
-              canRegister
-            });
             return canRegister ? (
               <TouchableOpacity
-                style={[styles.drawerMenuItem, { borderBottomColor: isDark ? '#374151' : '#E5E7EB' }]}
+                style={styles.drawerMenuItem}
                 onPress={() => {
                   setDrawerOpen(false);
                   router.push('/admin-register');
                 }}
               >
-                <IconSymbol name="person.badge.plus" size={24} color={isDark ? '#60A5FA' : '#2563EB'} />
-                <Text style={[styles.drawerMenuItemText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+                <IconSymbol name="person.badge.plus" size={24} color="#60A5FA" />
+                <Text style={styles.drawerMenuItemText}>
                   Register User
                 </Text>
               </TouchableOpacity>
@@ -150,30 +139,126 @@ export default function HomeScreen() {
           })()}
 
           {currentUser && currentUser.role === 'admin' && (
-            <TouchableOpacity
-              style={[styles.drawerMenuItem, { borderBottomColor: isDark ? '#374151' : '#E5E7EB' }]}
-              onPress={() => {
-                setDrawerOpen(false);
-                router.push('/products');
-              }}
-            >
-              <IconSymbol name="cube" size={24} color={isDark ? '#60A5FA' : '#2563EB'} />
-              <Text style={[styles.drawerMenuItemText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
-                Products
-              </Text>
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                style={styles.drawerMenuItem}
+                onPress={() => {
+                  setDrawerOpen(false);
+                  router.push('/products');
+                }}
+              >
+                <IconSymbol name="cube" size={24} color="#60A5FA" />
+                <Text style={styles.drawerMenuItemText}>
+                  Products
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.drawerMenuItem}
+                onPress={() => {
+                  setDrawerOpen(false);
+                  router.push('/dealer-requests');
+                }}
+              >
+                <IconSymbol name="list.bullet" size={24} color="#60A5FA" />
+                <Text style={styles.drawerMenuItemText}>
+                  Dealer Requests
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.drawerMenuItem}
+                onPress={() => {
+                  setDrawerOpen(false);
+                  router.push('/manage-stalkists');
+                }}
+              >
+                <IconSymbol name="person.3" size={24} color="#60A5FA" />
+                <Text style={styles.drawerMenuItemText}>
+                  Manage Stalkists
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.drawerMenuItem}
+                onPress={() => {
+                  setDrawerOpen(false);
+                  router.push('/manage-admin-dealers');
+                }}
+              >
+                <IconSymbol name="person.2" size={24} color="#60A5FA" />
+                <Text style={styles.drawerMenuItemText}>
+                  Manage Dealers
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {currentUser && currentUser.role === 'stalkist' && (
+            <>
+              <TouchableOpacity
+                style={styles.drawerMenuItem}
+                onPress={() => {
+                  setDrawerOpen(false);
+                  router.push('/manage-dealers');
+                }}
+              >
+                <IconSymbol name="person.2" size={24} color="#60A5FA" />
+                <Text style={styles.drawerMenuItemText}>
+                  Manage Dealers
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.drawerMenuItem}
+                onPress={() => {
+                  setDrawerOpen(false);
+                  router.push('/dealer-requests');
+                }}
+              >
+                <IconSymbol name="list.bullet.rectangle.portrait" size={24} color="#60A5FA" />
+                <Text style={styles.drawerMenuItemText}>
+                  Dealer Requests
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {(currentUser?.role === 'dealer' || currentUser?.role === 'dellear') && (
+            <>
+              <TouchableOpacity
+                style={styles.drawerMenuItem}
+                onPress={() => {
+                  setDrawerOpen(false);
+                  router.push('/dealer-dashboard');
+                }}
+              >
+                <IconSymbol name="cart" size={24} color="#60A5FA" />
+                <Text style={styles.drawerMenuItemText}>
+                  Dealer Dashboard
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.drawerMenuItem}
+                onPress={() => {
+                  setDrawerOpen(false);
+                  router.push('/manage-salesmen');
+                }}
+              >
+                <IconSymbol name="person.2" size={24} color="#60A5FA" />
+                <Text style={styles.drawerMenuItemText}>
+                  Manage Salesmen
+                </Text>
+              </TouchableOpacity>
+            </>
           )}
 
           {!currentUser && (
             <TouchableOpacity
-              style={[styles.drawerMenuItem, { borderBottomColor: isDark ? '#374151' : '#E5E7EB' }]}
+              style={styles.drawerMenuItem}
               onPress={() => {
                 setDrawerOpen(false);
                 router.push('/login');
               }}
             >
-              <IconSymbol name="person.fill" size={24} color={isDark ? '#60A5FA' : '#2563EB'} />
-              <Text style={[styles.drawerMenuItemText, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+              <IconSymbol name="person.fill" size={24} color="#60A5FA" />
+              <Text style={styles.drawerMenuItemText}>
                 Login
               </Text>
             </TouchableOpacity>
@@ -181,7 +266,7 @@ export default function HomeScreen() {
 
           {currentUser && (
             <TouchableOpacity
-              style={[styles.drawerMenuItem, { borderBottomColor: isDark ? '#374151' : '#E5E7EB' }]}
+              style={styles.drawerMenuItem}
               onPress={handleLogout}
             >
               <IconSymbol name="arrow.right.square" size={24} color="#DC2626" />
@@ -205,73 +290,58 @@ export default function HomeScreen() {
       renderDrawerContent={renderDrawerContent}
       drawerStyle={styles.drawer}
     >
-      <ThemedView style={styles.container}>
-        <View style={[styles.header, { backgroundColor: isDark ? '#1F2937' : '#F9FAFB' }]}>
+      <View style={styles.container}>
+        <View style={styles.header}>
           <TouchableOpacity
             onPress={() => setDrawerOpen(true)}
             style={styles.menuButton}
           >
-            <IconSymbol name="line.3.horizontal" size={28} color={isDark ? '#FFFFFF' : '#111827'} />
+            <IconSymbol name="line.3.horizontal" size={28} color="#FFFFFF" />
           </TouchableOpacity>
-          <ThemedText type="title" style={styles.headerTitle}>
+          <Text style={styles.headerTitle}>
             Dashboard
-          </ThemedText>
+          </Text>
         </View>
 
         <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
           {currentUser ? (
-            <ThemedView style={styles.userInfoContainer}>
-              <ThemedView style={styles.userCard}>
-                <ThemedText type="defaultSemiBold" style={styles.welcomeText}>
+            <View style={styles.userInfoContainer}>
+              <View style={styles.userCard}>
+                <Text style={styles.welcomeText}>
                   Welcome back,
-                </ThemedText>
-                <ThemedText style={styles.userName}>{currentUser.name}</ThemedText>
-                <ThemedText style={styles.userEmail}>{currentUser.email}</ThemedText>
-                <ThemedView style={styles.roleBadge}>
-                  <ThemedText style={[styles.roleText, { 
+                </Text>
+                <Text style={styles.userName}>{currentUser.name}</Text>
+                <Text style={styles.userEmail}>{currentUser.email}</Text>
+                <View style={styles.roleBadge}>
+                  <Text style={[styles.roleText, { 
                     color: currentUser.role === 'admin' ? '#DC2626' : 
                            currentUser.role === 'stalkist' ? '#059669' :
                            currentUser.role === 'dellear' ? '#7C3AED' : '#2563EB'
                   }]}>
                     {currentUser.role?.toUpperCase() || 'SALESMAN'}
-                  </ThemedText>
-                </ThemedView>
-                
-                {/* Temporary Register Button for Testing */}
-                {(currentUser.role === 'admin' || currentUser.role === 'stalkist' || currentUser.role === 'dellear') && (
-                  <TouchableOpacity
-                    style={[styles.registerButton, { backgroundColor: buttonColor }]}
-                    onPress={() => router.push('/admin-register')}
-                  >
-                    <ThemedText type="defaultSemiBold" style={styles.buttonText}>
-                      Register User
-                    </ThemedText>
-                  </TouchableOpacity>
-                )}
-              </ThemedView>
+                  </Text>
+                </View>
+              </View>
 
               {/* Admin User Count Widgets */}
               {currentUser.role === 'admin' && (
-                <ThemedView style={styles.widgetsContainer}>
-                  <ThemedText type="subtitle" style={styles.widgetsTitle}>
+                <View style={styles.widgetsContainer}>
+                  <Text style={styles.widgetsTitle}>
                     User Statistics
-                  </ThemedText>
+                  </Text>
                   
                   {loadingCounts ? (
                     <View style={styles.loadingContainer}>
-                      <ActivityIndicator size="small" color={isDark ? '#60A5FA' : '#2563EB'} />
+                      <ActivityIndicator size="small" color="#60A5FA" />
                     </View>
                   ) : userCounts ? (
                     <View style={styles.widgetsGrid}>
                       {/* Stalkist Widget */}
-                      <View style={[styles.widgetCard, { 
-                        backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
-                        borderColor: '#059669',
-                      }]}>
+                      <View style={styles.widgetCard}>
                         <View style={[styles.widgetIconContainer, { backgroundColor: '#059669' }]}>
                           <Text style={styles.widgetIcon}>👥</Text>
                         </View>
-                        <Text style={[styles.widgetLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                        <Text style={styles.widgetLabel}>
                           Stalkist
                         </Text>
                         <Text style={[styles.widgetCount, { color: '#059669' }]}>
@@ -280,14 +350,11 @@ export default function HomeScreen() {
                       </View>
 
                       {/* Dellear Widget */}
-                      <View style={[styles.widgetCard, { 
-                        backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
-                        borderColor: '#7C3AED',
-                      }]}>
+                      <View style={styles.widgetCard}>
                         <View style={[styles.widgetIconContainer, { backgroundColor: '#7C3AED' }]}>
                           <Text style={styles.widgetIcon}>🏪</Text>
                         </View>
-                        <Text style={[styles.widgetLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                        <Text style={styles.widgetLabel}>
                           Dellear
                         </Text>
                         <Text style={[styles.widgetCount, { color: '#7C3AED' }]}>
@@ -296,14 +363,11 @@ export default function HomeScreen() {
                       </View>
 
                       {/* Salesman Widget */}
-                      <View style={[styles.widgetCard, { 
-                        backgroundColor: isDark ? '#1F2937' : '#F9FAFB',
-                        borderColor: '#2563EB',
-                      }]}>
+                      <View style={styles.widgetCard}>
                         <View style={[styles.widgetIconContainer, { backgroundColor: '#2563EB' }]}>
                           <Text style={styles.widgetIcon}>💼</Text>
                         </View>
-                        <Text style={[styles.widgetLabel, { color: isDark ? '#9CA3AF' : '#6B7280' }]}>
+                        <Text style={styles.widgetLabel}>
                           Salesman
                         </Text>
                         <Text style={[styles.widgetCount, { color: '#2563EB' }]}>
@@ -312,24 +376,24 @@ export default function HomeScreen() {
                       </View>
                     </View>
                   ) : null}
-                </ThemedView>
+                </View>
               )}
-            </ThemedView>
+            </View>
           ) : (
-            <ThemedView style={styles.loginPrompt}>
-              <ThemedText type="subtitle">Please login to continue</ThemedText>
+            <View style={styles.loginPrompt}>
+              <Text style={styles.loginPromptText}>Please login to continue</Text>
               <TouchableOpacity
-                style={[styles.loginButton, { backgroundColor: buttonColor }]}
+                style={styles.loginButton}
                 onPress={() => router.push('/login')}
               >
-                <ThemedText type="defaultSemiBold" style={styles.buttonText}>
+                <Text style={styles.buttonText}>
                   Go to Login
-                </ThemedText>
+                </Text>
               </TouchableOpacity>
-            </ThemedView>
+            </View>
           )}
         </ScrollView>
-      </ThemedView>
+      </View>
     </Drawer>
   );
 }
@@ -337,6 +401,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#000000',
   },
   header: {
     flexDirection: 'row',
@@ -344,7 +409,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: '#1F1F1F',
+    backgroundColor: '#000000',
   },
   menuButton: {
     padding: 8,
@@ -352,10 +418,14 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins-Bold',
+    color: '#FFFFFF',
+    flex: 1,
+    textAlign: 'center',
   },
   content: {
     flex: 1,
+    backgroundColor: '#000000',
   },
   contentContainer: {
     padding: 16,
@@ -367,20 +437,25 @@ const styles = StyleSheet.create({
   userCard: {
     padding: 20,
     borderRadius: 12,
-    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+    backgroundColor: '#1D1D1D',
     gap: 12,
   },
   welcomeText: {
     fontSize: 16,
+    fontFamily: 'Poppins-Light',
+    color: '#FFFFFF',
     opacity: 0.8,
   },
   userName: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins-Bold',
+    color: '#FFFFFF',
     marginTop: 4,
   },
   userEmail: {
     fontSize: 14,
+    fontFamily: 'Poppins-Light',
+    color: '#FFFFFF',
     opacity: 0.7,
     marginBottom: 8,
   },
@@ -394,7 +469,7 @@ const styles = StyleSheet.create({
   },
   roleText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'Poppins-Bold',
     letterSpacing: 1,
   },
   loginPrompt: {
@@ -402,17 +477,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 16,
   },
+  loginPromptText: {
+    fontSize: 18,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#FFFFFF',
+  },
   loginButton: {
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#3B82F6',
   },
   buttonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins-SemiBold',
   },
   registerButton: {
     marginTop: 16,
@@ -421,6 +502,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#3B82F6',
   },
   widgetsContainer: {
     marginTop: 24,
@@ -428,7 +510,8 @@ const styles = StyleSheet.create({
   },
   widgetsTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins-Bold',
+    color: '#FFFFFF',
     marginBottom: 8,
   },
   loadingContainer: {
@@ -448,6 +531,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     alignItems: 'center',
     gap: 8,
+    backgroundColor: '#1D1D1D',
   },
   widgetIconContainer: {
     width: 48,
@@ -462,29 +546,34 @@ const styles = StyleSheet.create({
   },
   widgetLabel: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Poppins-Medium',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    color: '#FFFFFF',
   },
   widgetCount: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins-Bold',
   },
   drawer: {
     width: 280,
+    backgroundColor: '#000000',
   },
   drawerContent: {
     flex: 1,
     paddingTop: 60,
+    backgroundColor: '#000000',
   },
   drawerHeader: {
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: '#1F1F1F',
+    backgroundColor: '#000000',
   },
   drawerTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins-Bold',
+    color: '#FFFFFF',
     marginBottom: 16,
   },
   drawerUserInfo: {
@@ -492,10 +581,13 @@ const styles = StyleSheet.create({
   },
   drawerUserName: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Poppins-SemiBold',
+    color: '#FFFFFF',
   },
   drawerUserEmail: {
     fontSize: 14,
+    fontFamily: 'Poppins-Light',
+    color: '#9CA3AF',
   },
   drawerRoleBadge: {
     marginTop: 8,
@@ -503,12 +595,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 6,
     alignSelf: 'flex-start',
+    backgroundColor: '#E5E7EB',
   },
   drawerRoleText: {
-    color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: '700',
+    fontFamily: 'Poppins-Bold',
     letterSpacing: 1,
+    color: '#111827',
   },
   drawerMenu: {
     paddingTop: 8,
@@ -518,10 +611,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
+    borderBottomColor: '#1F1F1F',
     gap: 12,
   },
   drawerMenuItemText: {
     fontSize: 16,
-    fontWeight: '500',
+    fontFamily: 'Poppins-Medium',
+    color: '#FFFFFF',
   },
 });

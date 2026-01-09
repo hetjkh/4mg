@@ -9,7 +9,7 @@ export default function RegisterScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={[styles.container, { backgroundColor: isDark ? '#111827' : '#FFFFFF' }]}
+      style={[styles.container, { backgroundColor: isDark ? '#111827' : '#1D1D1D' }]}
     >
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <ScrollView
@@ -20,7 +20,7 @@ export default function RegisterScreen() {
         <View style={styles.contentWrapper}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={[styles.title, { color: isDark ? '#FFFFFF' : '#111827' }]}>
+            <Text style={[styles.title, { color: isDark ? '#1D1D1D' : '#111827' }]}>
               Registration Restricted
             </Text>
             <Text style={[styles.subtitle, { color: isDark ? '#9CA3AF' : '#4B5563' }]}>
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loginButtonText: {
-    color: '#FFFFFF',
+    color: '#1D1D1D',
     fontSize: 16,
     fontWeight: '600',
   },

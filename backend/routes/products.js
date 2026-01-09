@@ -51,27 +51,34 @@ const verifyAdmin = (req, res, next) => {
 // Create Product (Admin only)
 router.post('/', verifyToken, verifyAdmin, async (req, res) => {
   try {
-    const { title, description, price, image, stock } = req.body;
+    const { title, description, packetPrice, packetsPerStrip, image, stock } = req.body;
 
     // Validation
-    if (!title || price === undefined || !image || stock === undefined) {
+    if (!title || packetPrice === undefined || packetsPerStrip === undefined || !image || stock === undefined) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Please provide title, price, image, and stock' 
+        message: 'Please provide title, packetPrice, packetsPerStrip, image, and stock' 
       });
     }
 
-    if (typeof price !== 'number' || price < 0) {
+    if (typeof packetPrice !== 'number' || packetPrice < 0) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Price must be a positive number' 
+        message: 'Packet price must be a positive number' 
+      });
+    }
+
+    if (typeof packetsPerStrip !== 'number' || packetsPerStrip < 1) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Packets per strip must be at least 1' 
       });
     }
 
     if (typeof stock !== 'number' || stock < 0) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Stock must be a positive number' 
+        message: 'Stock must be a positive number (in strips)' 
       });
     }
 
@@ -79,7 +86,8 @@ router.post('/', verifyToken, verifyAdmin, async (req, res) => {
     const product = new Product({
       title: title.trim(),
       description: description?.trim() || '',
-      price,
+      packetPrice,
+      packetsPerStrip,
       image: image.trim(),
       stock,
       createdBy: req.user._id,
@@ -95,7 +103,8 @@ router.post('/', verifyToken, verifyAdmin, async (req, res) => {
           id: product._id,
           title: product.title,
           description: product.description,
-          price: product.price,
+          packetPrice: product.packetPrice,
+          packetsPerStrip: product.packetsPerStrip,
           image: product.image,
           stock: product.stock,
           createdAt: product.createdAt,
@@ -126,7 +135,8 @@ router.get('/', verifyToken, async (req, res) => {
           id: product._id,
           title: product.title,
           description: product.description,
-          price: product.price,
+          packetPrice: product.packetPrice,
+          packetsPerStrip: product.packetsPerStrip,
           image: product.image,
           stock: product.stock,
           createdBy: product.createdBy,
@@ -165,7 +175,8 @@ router.get('/:id', verifyToken, async (req, res) => {
           id: product._id,
           title: product.title,
           description: product.description,
-          price: product.price,
+          packetPrice: product.packetPrice,
+          packetsPerStrip: product.packetsPerStrip,
           image: product.image,
           stock: product.stock,
           createdBy: product.createdBy,
@@ -187,7 +198,7 @@ router.get('/:id', verifyToken, async (req, res) => {
 // Update Product (Admin only)
 router.put('/:id', verifyToken, verifyAdmin, async (req, res) => {
   try {
-    const { title, description, price, image, stock } = req.body;
+    const { title, description, packetPrice, packetsPerStrip, image, stock } = req.body;
 
     const product = await Product.findById(req.params.id);
 
@@ -201,21 +212,30 @@ router.put('/:id', verifyToken, verifyAdmin, async (req, res) => {
     // Update fields
     if (title !== undefined) product.title = title.trim();
     if (description !== undefined) product.description = description?.trim() || '';
-    if (price !== undefined) {
-      if (typeof price !== 'number' || price < 0) {
+    if (packetPrice !== undefined) {
+      if (typeof packetPrice !== 'number' || packetPrice < 0) {
         return res.status(400).json({ 
           success: false, 
-          message: 'Price must be a positive number' 
+          message: 'Packet price must be a positive number' 
         });
       }
-      product.price = price;
+      product.packetPrice = packetPrice;
+    }
+    if (packetsPerStrip !== undefined) {
+      if (typeof packetsPerStrip !== 'number' || packetsPerStrip < 1) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Packets per strip must be at least 1' 
+        });
+      }
+      product.packetsPerStrip = packetsPerStrip;
     }
     if (image !== undefined) product.image = image.trim();
     if (stock !== undefined) {
       if (typeof stock !== 'number' || stock < 0) {
         return res.status(400).json({ 
           success: false, 
-          message: 'Stock must be a positive number' 
+          message: 'Stock must be a positive number (in strips)' 
         });
       }
       product.stock = stock;
@@ -231,7 +251,8 @@ router.put('/:id', verifyToken, verifyAdmin, async (req, res) => {
           id: product._id,
           title: product.title,
           description: product.description,
-          price: product.price,
+          packetPrice: product.packetPrice,
+          packetsPerStrip: product.packetsPerStrip,
           image: product.image,
           stock: product.stock,
           createdAt: product.createdAt,
