@@ -281,6 +281,35 @@ export default function HomeScreen() {
                   Manage Salesmen
                 </Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.drawerMenuItem, { borderBottomColor: colors.border }]}
+                onPress={() => {
+                  setDrawerOpen(false);
+                  router.push('/distribute-stock');
+                }}
+              >
+                <IconSymbol name="square.and.arrow.up" size={24} color={colors.primaryLight} />
+                <Text style={[styles.drawerMenuItemText, { color: colors.text, fontFamily: Fonts.medium }]}>
+                  Distribute Stock
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
+
+          {currentUser && currentUser.role === 'salesman' && (
+            <>
+              <TouchableOpacity
+                style={[styles.drawerMenuItem, { borderBottomColor: colors.border }]}
+                onPress={() => {
+                  setDrawerOpen(false);
+                  router.push('/my-stock');
+                }}
+              >
+                <IconSymbol name="cube" size={24} color={colors.primaryLight} />
+                <Text style={[styles.drawerMenuItemText, { color: colors.text, fontFamily: Fonts.medium }]}>
+                  My Stock
+                </Text>
+              </TouchableOpacity>
             </>
           )}
 

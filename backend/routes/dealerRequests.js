@@ -5,6 +5,8 @@ const DealerRequest = require('../models/DealerRequest');
 const Product = require('../models/Product');
 const User = require('../models/User');
 const AdminSettings = require('../models/AdminSettings');
+const DealerStock = require('../models/DealerStock');
+const StockAllocation = require('../models/StockAllocation');
 const multer = require('multer');
 const cloudinary = require('../config/cloudinary');
 
@@ -590,6 +592,31 @@ router.put('/:id/approve', verifyToken, verifyAdmin, async (req, res) => {
     request.processedAt = new Date();
     request.notes = req.body.notes || '';
     await request.save();
+
+    // Create or update dealer stock
+    let dealerStock = await DealerStock.findOne({
+      dealer: request.dealer._id,
+      product: request.product._id,
+      sourceRequest: request._id,
+    });
+
+    if (dealerStock) {
+      // If stock entry exists for this request, update it
+      dealerStock.totalStrips += request.strips;
+      dealerStock.availableStrips = dealerStock.totalStrips - dealerStock.allocatedStrips;
+      await dealerStock.save();
+    } else {
+      // Create new dealer stock entry
+      dealerStock = new DealerStock({
+        dealer: request.dealer._id,
+        product: request.product._id,
+        totalStrips: request.strips,
+        allocatedStrips: 0,
+        availableStrips: request.strips,
+        sourceRequest: request._id,
+      });
+      await dealerStock.save();
+    }
 
     await request.populate('product', 'title packetPrice packetsPerStrip image');
     await request.populate('dealer', 'name email');

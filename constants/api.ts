@@ -21,5 +21,6 @@ export const API_ENDPOINTS = {
   ADMIN_DEALERS: '/admin/dealers',
   ADMIN_USERS: '/admin/users',
   STALKISTS: '/stalkists',
+  STOCK_ALLOCATION: '/stock-allocation',
 };
 
