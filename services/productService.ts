@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL, API_ENDPOINTS } from '@/constants/api';
+import { getLanguage } from '@/utils/apiHelpers';
 
 const TOKEN_KEY = 'auth_token';
 
@@ -43,6 +44,7 @@ const getToken = async (): Promise<string | null> => {
 export const getProducts = async (): Promise<Product[]> => {
   try {
     const token = await getToken();
+    const language = await getLanguage();
     if (!token) {
       throw new Error('Not authenticated');
     }
@@ -52,6 +54,7 @@ export const getProducts = async (): Promise<Product[]> => {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
+        'Accept-Language': language,
       },
     });
 
@@ -75,6 +78,7 @@ export const getProducts = async (): Promise<Product[]> => {
 export const getProduct = async (id: string): Promise<Product> => {
   try {
     const token = await getToken();
+    const language = await getLanguage();
     if (!token) {
       throw new Error('Not authenticated');
     }
@@ -84,6 +88,7 @@ export const getProduct = async (id: string): Promise<Product> => {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
+        'Accept-Language': language,
       },
     });
 
@@ -110,7 +115,9 @@ export const createProduct = async (
   packetPrice: number,
   packetsPerStrip: number,
   image: string,
-  stock: number
+  stock: number,
+  titleGu?: string,
+  descriptionGu?: string
 ): Promise<ProductResponse> => {
   try {
     const token = await getToken();
@@ -118,13 +125,15 @@ export const createProduct = async (
       throw new Error('Not authenticated');
     }
 
+    const language = await getLanguage();
     const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.PRODUCTS}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
+        'Accept-Language': language,
       },
-      body: JSON.stringify({ title, description, packetPrice, packetsPerStrip, image, stock }),
+      body: JSON.stringify({ title, description, packetPrice, packetsPerStrip, image, stock, titleGu, descriptionGu }),
     });
 
     const data = await response.json();
@@ -159,11 +168,13 @@ export const updateProduct = async (
       throw new Error('Not authenticated');
     }
 
+    const language = await getLanguage();
     const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.PRODUCTS}/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
+        'Accept-Language': language,
       },
       body: JSON.stringify({ title, description, packetPrice, packetsPerStrip, image, stock }),
     });
@@ -192,11 +203,13 @@ export const deleteProduct = async (id: string): Promise<{ success: boolean; mes
       throw new Error('Not authenticated');
     }
 
+    const language = await getLanguage();
     const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.PRODUCTS}/${id}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
+        'Accept-Language': language,
       },
     });
 

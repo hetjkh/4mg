@@ -1,9 +1,3 @@
-import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { useFonts } from 'expo-font';
-import { useEffect } from 'react';
-import * as SplashScreen from 'expo-splash-screen';
 import {
   Poppins_300Light,
   Poppins_400Regular,
@@ -11,12 +5,20 @@ import {
   Poppins_600SemiBold,
   Poppins_700Bold,
 } from '@expo-google-fonts/poppins';
+import { DarkTheme, DefaultTheme, ThemeProvider as NavigationThemeProvider } from '@react-navigation/native';
+import { useFonts } from 'expo-font';
+import { Stack, usePathname } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
+import React, { useEffect } from 'react';
 import 'react-native-reanimated';
 import '../global.css';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { ThemeProvider } from '@/contexts/ThemeContext';
-import { useTheme } from '@/contexts/ThemeContext';
+import { GlobalDrawer } from '@/components/GlobalDrawer';
+import { Colors } from '@/constants/theme';
+import { LanguageProvider } from '@/contexts/LanguageContext';
+import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -25,10 +27,26 @@ export const unstable_settings = {
   anchor: '(tabs)',
 };
 
-function RootLayoutNav() {
-  const { isDark } = useTheme();
+function SafeAreaWrapper({ children }: { children: React.ReactNode }) {
+  const { colorScheme } = useTheme();
+  const colors = Colors[colorScheme];
   
   return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
+      {children}
+    </SafeAreaView>
+  );
+}
+
+function RootLayoutNav() {
+  const { isDark } = useTheme();
+  const pathname = usePathname();
+  
+  // Pages that should NOT have the drawer (login, register)
+  const noDrawerPages = ['/login', '/register'];
+  const shouldShowDrawer = !noDrawerPages.includes(pathname);
+  
+  const content = (
     <NavigationThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -41,6 +59,12 @@ function RootLayoutNav() {
       <StatusBar style={isDark ? 'light' : 'dark'} />
     </NavigationThemeProvider>
   );
+  
+  if (shouldShowDrawer) {
+    return <GlobalDrawer>{content}</GlobalDrawer>;
+  }
+  
+  return content;
 }
 
 export default function RootLayout() {
@@ -63,8 +87,14 @@ export default function RootLayout() {
   }
 
   return (
+    <SafeAreaProvider>
+      <LanguageProvider>
     <ThemeProvider>
+          <SafeAreaWrapper>
       <RootLayoutNav />
+          </SafeAreaWrapper>
     </ThemeProvider>
+      </LanguageProvider>
+    </SafeAreaProvider>
   );
 }

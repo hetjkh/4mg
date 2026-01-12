@@ -8,6 +8,7 @@ import { getUser, User } from '@/services/authService';
 import { deleteDealer } from '@/services/adminUserService';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Colors, Fonts } from '@/constants/theme';
+import { HeaderWithMenu } from '@/components/HeaderWithMenu';
 
 export default function ManageAdminDealersScreen() {
   const [dealers, setDealers] = useState<AdminDealer[]>([]);
@@ -137,20 +138,19 @@ export default function ManageAdminDealersScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       
-      <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={[styles.backButtonText, { color: colors.primaryLight, fontFamily: Fonts.semiBold }]}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: Fonts.bold }]}>Manage Dealers</Text>
-        <TouchableOpacity
-          onPress={() => {
-            router.push('/admin-register');
-          }}
-          style={[styles.addButton, { backgroundColor: colors.primary }]}
-        >
-          <Text style={[styles.addButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>+ Add</Text>
-        </TouchableOpacity>
-      </View>
+      <HeaderWithMenu
+        title="Manage Dealers"
+        rightButton={
+          <TouchableOpacity
+            onPress={() => {
+              router.push('/admin-register');
+            }}
+            style={[styles.addButton, { backgroundColor: colors.primary }]}
+          >
+            <Text style={[styles.addButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>+ Add</Text>
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView style={[styles.scrollView, { backgroundColor: colors.background }]} contentContainerStyle={styles.scrollContent}>
         <View style={styles.dealersContainer}>
@@ -196,6 +196,13 @@ export default function ManageAdminDealersScreen() {
                 </View>
 
                 <View style={styles.dealerActions}>
+                  <TouchableOpacity
+                    style={[styles.allocateButton, { backgroundColor: colors.primary }]}
+                    onPress={() => router.push(`/allocate-location-to-dealer?dealerId=${dealer.id}&dealerName=${encodeURIComponent(dealer.name)}`)}
+                  >
+                    <Text style={[styles.allocateButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>Allocate Location</Text>
+                  </TouchableOpacity>
+                  
                   <TouchableOpacity
                     style={[styles.viewSalesmenButton, { backgroundColor: colors.success }]}
                     onPress={() => router.push(`/dealer-salesmen/${dealer.id}?admin=true`)}
@@ -329,9 +336,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginTop: 8,
+    flexWrap: 'wrap',
+  },
+  allocateButton: {
+    flex: 1,
+    minWidth: '48%',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  allocateButtonText: {
+    fontSize: Fonts.sizes.sm,
   },
   viewSalesmenButton: {
     flex: 1,
+    minWidth: '48%',
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,

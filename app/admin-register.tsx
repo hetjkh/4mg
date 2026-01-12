@@ -1,5 +1,7 @@
 import { Colors, Fonts } from '@/constants/theme';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { getAllowedRoles, getUser, registerUser } from '@/services/authService';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -8,16 +10,17 @@ import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Scroll
 
 type UserRole = 'admin' | 'stalkist' | 'dellear' | 'salesman';
 
-const roleLabels: Record<UserRole, string> = {
-  admin: 'Admin',
-  stalkist: 'Stalkist',
-  dellear: 'Dellear',
-  salesman: 'Salesman',
-};
-
 export default function AdminRegisterScreen() {
   const { isDark, colorScheme } = useTheme();
+  const { t } = useLanguage();
   const colors = Colors[colorScheme];
+
+  const roleLabels: Record<UserRole, string> = {
+    admin: t('roles.admin'),
+    stalkist: t('roles.stalkist'),
+    dellear: t('roles.dellear'),
+    salesman: t('roles.salesman'),
+  };
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -51,7 +54,7 @@ export default function AdminRegisterScreen() {
       }
     } catch (err: any) {
       console.error('Error loading allowed roles:', err);
-      Alert.alert('Error', 'Failed to load allowed roles. Please try again.');
+      Alert.alert(t('common.error'), t('register.failedToLoadRoles'));
       router.back();
     } finally {
       setLoadingRoles(false);
@@ -60,29 +63,29 @@ export default function AdminRegisterScreen() {
 
   const getSubtitle = () => {
     if (currentUserRole === 'admin') {
-      return 'Admin - Create user account with any role';
+      return t('register.subtitleAdmin');
     } else if (currentUserRole === 'stalkist') {
-      return 'Stalkist - Create Dellear account';
+      return t('register.subtitleStalkist');
     } else if (currentUserRole === 'dellear') {
-      return 'Dellear - Create Salesman account';
+      return t('register.subtitleDellear');
     }
-    return 'Create user account';
+    return t('register.subtitleDefault');
   };
 
   const handleRegister = async () => {
     // Validation
     if (!name.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
-      setError('Please fill in all fields');
+      setError(t('auth.fillAllFields'));
       return;
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError(t('auth.passwordMinLength'));
       return;
     }
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('auth.passwordsNotMatch'));
       return;
     }
 
@@ -93,9 +96,9 @@ export default function AdminRegisterScreen() {
       const response = await registerUser(name.trim(), email.trim(), password, role);
       
       if (response.success) {
-        Alert.alert('Success', 'User registered successfully!', [
+        Alert.alert(t('common.success'), t('auth.registrationSuccess'), [
           {
-            text: 'OK',
+            text: t('common.ok'),
             onPress: () => {
               // Clear form
               setName('');
@@ -124,8 +127,8 @@ export default function AdminRegisterScreen() {
         ]);
       }
     } catch (err: any) {
-      setError(err.message || 'Registration failed. Please try again.');
-      Alert.alert('Error', err.message || 'Registration failed. Please try again.');
+      setError(err.message || t('auth.registrationFailed'));
+      Alert.alert(t('common.error'), err.message || t('auth.registrationFailed'));
     } finally {
       setLoading(false);
     }
@@ -143,10 +146,15 @@ export default function AdminRegisterScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.contentWrapper}>
+          {/* Language Switcher */}
+          <View style={styles.languageSwitcherContainer}>
+            <LanguageSwitcher />
+          </View>
+
           {/* Header */}
           <View style={styles.header}>
             <Text style={[styles.title, { color: colors.text, fontFamily: Fonts.bold }]}>
-              Register New User
+              {t('register.title')}
             </Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary, fontFamily: Fonts.light }]}>
               {getSubtitle()}
@@ -167,7 +175,7 @@ export default function AdminRegisterScreen() {
             {/* Name Input */}
             <View style={styles.inputContainer}>
               <Text style={[styles.label, { color: colors.textSecondary, fontFamily: Fonts.medium }]}>
-                Full Name
+                {t('auth.fullName')}
               </Text>
               <TextInput
                 style={[
@@ -179,7 +187,7 @@ export default function AdminRegisterScreen() {
                     fontFamily: Fonts.regular,
                   },
                 ]}
-                placeholder="Enter full name"
+                placeholder={t('auth.enterFullName')}
                 placeholderTextColor={colors.inputPlaceholder}
                 value={name}
                 onChangeText={(text) => {
@@ -195,7 +203,7 @@ export default function AdminRegisterScreen() {
             {/* Email Input */}
             <View style={styles.inputContainer}>
               <Text style={[styles.label, { color: colors.textSecondary, fontFamily: Fonts.medium }]}>
-                Email
+                {t('auth.email')}
               </Text>
               <TextInput
                 style={[
@@ -207,7 +215,7 @@ export default function AdminRegisterScreen() {
                     fontFamily: Fonts.regular,
                   },
                 ]}
-                placeholder="Enter email"
+                placeholder={t('auth.enterEmail')}
                 placeholderTextColor={colors.inputPlaceholder}
                 value={email}
                 onChangeText={(text) => {
@@ -225,14 +233,14 @@ export default function AdminRegisterScreen() {
             {loadingRoles ? (
               <View style={styles.inputContainer}>
                 <Text style={[styles.label, { color: colors.textSecondary, fontFamily: Fonts.medium }]}>
-                  Role
+                  {t('auth.role')}
                 </Text>
                 <ActivityIndicator size="small" color={colors.primaryLight} />
               </View>
             ) : allowedRoles.length > 0 ? (
               <View style={styles.inputContainer}>
                 <Text style={[styles.label, { color: colors.textSecondary, fontFamily: Fonts.medium }]}>
-                  Role
+                  {t('auth.role')}
                 </Text>
                 <TouchableOpacity
                   style={[
@@ -274,7 +282,7 @@ export default function AdminRegisterScreen() {
                       onStartShouldSetResponder={() => true}
                     >
                       <Text style={[styles.dropdownTitle, { color: colors.text, fontFamily: Fonts.semiBold, borderBottomColor: colors.border }]}>
-                        Select Role
+                        {t('auth.selectRole')}
                       </Text>
                       <ScrollView style={styles.dropdownList}>
                         {allowedRoles.map((roleOption) => (
@@ -326,7 +334,7 @@ export default function AdminRegisterScreen() {
             {/* Password Input */}
             <View style={styles.inputContainer}>
               <Text style={[styles.label, { color: colors.textSecondary, fontFamily: Fonts.medium }]}>
-                Password
+                {t('auth.password')}
               </Text>
               <TextInput
                 style={[
@@ -338,7 +346,7 @@ export default function AdminRegisterScreen() {
                     fontFamily: Fonts.regular,
                   },
                 ]}
-                placeholder="Create password"
+                placeholder={t('auth.createPassword')}
                 placeholderTextColor={colors.inputPlaceholder}
                 value={password}
                 onChangeText={(text) => {
@@ -355,7 +363,7 @@ export default function AdminRegisterScreen() {
             {/* Confirm Password Input */}
             <View style={styles.inputContainer}>
               <Text style={[styles.label, { color: colors.textSecondary, fontFamily: Fonts.medium }]}>
-                Confirm Password
+                {t('auth.confirmPassword')}
               </Text>
               <TextInput
                 style={[
@@ -367,7 +375,7 @@ export default function AdminRegisterScreen() {
                     fontFamily: Fonts.regular,
                   },
                 ]}
-                placeholder="Confirm password"
+                placeholder={t('auth.confirmPasswordPlaceholder')}
                 placeholderTextColor={colors.inputPlaceholder}
                 value={confirmPassword}
                 onChangeText={(text) => {
@@ -399,7 +407,7 @@ export default function AdminRegisterScreen() {
               <ActivityIndicator color={colors.textInverse} />
             ) : (
               <Text style={[styles.registerButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>
-                Register User
+                {t('register.registerUser')}
               </Text>
             )}
           </TouchableOpacity>
@@ -410,7 +418,7 @@ export default function AdminRegisterScreen() {
             style={styles.backButton}
           >
             <Text style={[styles.backButtonText, { color: colors.textTertiary, fontFamily: Fonts.medium }]}>
-              Back to Dashboard
+              {t('register.backToDashboard')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -436,6 +444,10 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 448,
     alignSelf: 'center',
+  },
+  languageSwitcherContainer: {
+    alignItems: 'flex-end',
+    marginBottom: 16,
   },
   header: {
     marginBottom: 32,

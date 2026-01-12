@@ -1,0 +1,92 @@
+{
+  "common": {
+    "ok": "OK",
+    "cancel": "Cancel",
+    "back": "Back",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "submit": "Submit",
+    "search": "Search",
+    "filter": "Filter",
+    "selectLanguage": "Select Language"
+  },
+  "auth": {
+    "welcomeBack": "Welcome Back",
+    "signInToContinue": "Sign in to continue",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "fullName": "Full Name",
+    "role": "Role",
+    "login": "Login",
+    "register": "Register",
+    "loginSuccess": "Login successful!",
+    "loginFailed": "Login failed. Please try again.",
+    "registrationSuccess": "User registered successfully!",
+    "registrationFailed": "Registration failed. Please try again.",
+    "fillAllFields": "Please fill in all fields",
+    "passwordMinLength": "Password must be at least 6 characters",
+    "passwordsNotMatch": "Passwords do not match",
+    "enterEmail": "Enter email",
+    "enterPassword": "Enter password",
+    "enterFullName": "Enter full name",
+    "createPassword": "Create password",
+    "confirmPasswordPlaceholder": "Confirm password",
+    "selectRole": "Select Role"
+  },
+  "roles": {
+    "admin": "Admin",
+    "stalkist": "Stalkist",
+    "dellear": "Dellear",
+    "salesman": "Salesman"
+  },
+  "register": {
+    "title": "Register New User",
+    "subtitleAdmin": "Admin - Create user account with any role",
+    "subtitleStalkist": "Stalkist - Create Dellear account",
+    "subtitleDellear": "Dellear - Create Salesman account",
+    "subtitleDefault": "Create user account",
+    "registerUser": "Register User",
+    "backToDashboard": "Back to Dashboard",
+    "failedToLoadRoles": "Failed to load allowed roles. Please try again.",
+    "failedToFetchData": "Failed to fetch data"
+  },
+  "errors": {
+    "networkError": "Cannot connect to server. Please check your connection.",
+    "accessDenied": "Access Denied",
+    "genericError": "Something went wrong. Please try again."
+  },
+  "dashboard": {
+    "menu": "Menu",
+    "dashboard": "Dashboard",
+    "welcomeBack": "Welcome back,",
+    "userStatistics": "User Statistics",
+    "analyticsInsights": "Analytics & Insights",
+    "userGrowth": "User Growth (Last 7 Days)",
+    "userDistribution": "User Distribution",
+    "roleDistribution": "Role Distribution",
+    "totalUsers": "Total Users",
+    "loadingStatistics": "Loading statistics..."
+  },
+  "sidebar": {
+    "lightMode": "Light Mode",
+    "darkMode": "Dark Mode",
+    "registerUser": "Register User",
+    "products": "Products",
+    "dealerRequests": "Dealer Requests",
+    "manageStalkists": "Manage Stalkists",
+    "manageDealers": "Manage Dealers",
+    "dealerDashboard": "Dealer Dashboard",
+    "manageSalesmen": "Manage Salesmen",
+    "distributeStock": "Distribute Stock",
+    "myStock": "My Stock",
+    "login": "Login",
+    "logout": "Logout",
+    "logoutConfirm": "Are you sure you want to logout?",
+    "logoutSuccess": "Logged out successfully"
+  }
+}

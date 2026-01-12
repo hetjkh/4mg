@@ -1,24 +1,22 @@
-import { StyleSheet, TouchableOpacity, Alert, View, Text, ScrollView, ActivityIndicator } from 'react-native';
-import { useState, useRef } from 'react';
 import * as React from 'react';
-import { Drawer } from 'react-native-drawer-layout';
+import { useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { router, useFocusEffect } from 'expo-router';
-import { Colors, Fonts } from '@/constants/theme';
-import { useTheme } from '@/contexts/ThemeContext';
-import { getUser, logout, User, getUserCounts, UserCounts } from '@/services/authService';
+import { AreaChart, BarChart, DonutChart, LineChart, PieChart } from '@/components/charts';
+import { HeaderWithMenu } from '@/components/HeaderWithMenu';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { BarChart, LineChart, PieChart, AreaChart, DonutChart } from '@/components/charts';
-import { getStatisticsData, getRoleDistributionData } from '@/services/statisticsService';
+import { Colors, Fonts } from '@/constants/theme';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { getUser, getUserCounts, User, UserCounts } from '@/services/authService';
+import { getRoleDistributionData, getStatisticsData } from '@/services/statisticsService';
+import { router, useFocusEffect } from 'expo-router';
 
 export default function HomeScreen() {
-  const { isDark, colorScheme, toggleTheme } = useTheme();
+  const { isDark, colorScheme } = useTheme();
+  const { t } = useLanguage();
   const colors = Colors[colorScheme];
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const drawerRef = useRef<Drawer>(null);
   const [userCounts, setUserCounts] = useState<UserCounts | null>(null);
   const [loadingCounts, setLoadingCounts] = useState(false);
   const [statisticsData, setStatisticsData] = useState<any>(null);
@@ -81,28 +79,6 @@ export default function HomeScreen() {
     }, [loadUser])
   );
 
-  const handleLogout = async () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            await logout();
-            setCurrentUser(null);
-            setDrawerOpen(false);
-            router.replace('/login');
-          },
-        },
-      ]
-    );
-  };
 
   const getRoleColor = (role: string) => {
     switch (role) {
@@ -113,266 +89,16 @@ export default function HomeScreen() {
     }
   };
 
-  const renderDrawerContent = () => {
-    return (
-      <View style={[styles.drawerContent, { backgroundColor: colors.background }]}>
-        <View style={[styles.drawerHeader, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-          <Text style={[styles.drawerTitle, { color: colors.text, fontFamily: Fonts.bold }]}>
-            Menu
-          </Text>
-          {currentUser && (
-            <View style={styles.drawerUserInfo}>
-              <Text style={[styles.drawerUserName, { color: colors.text, fontFamily: Fonts.semiBold }]}>
-                {currentUser.name}
-              </Text>
-              <Text style={[styles.drawerUserEmail, { color: colors.textSecondary, fontFamily: Fonts.light }]}>
-                {currentUser.email}
-              </Text>
-              <View style={[styles.drawerRoleBadge, { backgroundColor: getRoleColor(currentUser.role || 'salesman') }]}>
-                <Text style={[styles.drawerRoleText, { color: colors.textInverse, fontFamily: Fonts.bold }]}>
-                  {currentUser.role?.toUpperCase() || 'SALESMAN'}
-                </Text>
-              </View>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.drawerMenu}>
-          {/* Theme Toggle */}
-          <TouchableOpacity
-            style={[styles.drawerMenuItem, { borderBottomColor: colors.border }]}
-            onPress={() => {
-              toggleTheme();
-            }}
-          >
-            <IconSymbol name={isDark ? "sun.max" : "moon"} size={24} color={colors.primaryLight} />
-            <Text style={[styles.drawerMenuItemText, { color: colors.text, fontFamily: Fonts.medium }]}>
-              {isDark ? 'Light Mode' : 'Dark Mode'}
-            </Text>
-          </TouchableOpacity>
-
-          {(() => {
-            const canRegister = currentUser && (
-              currentUser.role === 'admin' || 
-              currentUser.role === 'stalkist' || 
-              currentUser.role === 'dellear'
-            );
-            return canRegister ? (
-              <TouchableOpacity
-                style={[styles.drawerMenuItem, { borderBottomColor: colors.border }]}
-                onPress={() => {
-                  setDrawerOpen(false);
-                  router.push('/admin-register');
-                }}
-              >
-                <IconSymbol name="person.badge.plus" size={24} color={colors.primaryLight} />
-                <Text style={[styles.drawerMenuItemText, { color: colors.text, fontFamily: Fonts.medium }]}>
-                  Register User
-                </Text>
-              </TouchableOpacity>
-            ) : null;
-          })()}
-
-          {currentUser && currentUser.role === 'admin' && (
-            <>
-              <TouchableOpacity
-                style={[styles.drawerMenuItem, { borderBottomColor: colors.border }]}
-                onPress={() => {
-                  setDrawerOpen(false);
-                  router.push('/products');
-                }}
-              >
-                <IconSymbol name="cube" size={24} color={colors.primaryLight} />
-                <Text style={[styles.drawerMenuItemText, { color: colors.text, fontFamily: Fonts.medium }]}>
-                  Products
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.drawerMenuItem, { borderBottomColor: colors.border }]}
-                onPress={() => {
-                  setDrawerOpen(false);
-                  router.push('/dealer-requests');
-                }}
-              >
-                <IconSymbol name="list.bullet" size={24} color={colors.primaryLight} />
-                <Text style={[styles.drawerMenuItemText, { color: colors.text, fontFamily: Fonts.medium }]}>
-                  Dealer Requests
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.drawerMenuItem, { borderBottomColor: colors.border }]}
-                onPress={() => {
-                  setDrawerOpen(false);
-                  router.push('/manage-stalkists');
-                }}
-              >
-                <IconSymbol name="person.3" size={24} color={colors.primaryLight} />
-                <Text style={[styles.drawerMenuItemText, { color: colors.text, fontFamily: Fonts.medium }]}>
-                  Manage Stalkists
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.drawerMenuItem, { borderBottomColor: colors.border }]}
-                onPress={() => {
-                  setDrawerOpen(false);
-                  router.push('/manage-admin-dealers');
-                }}
-              >
-                <IconSymbol name="person.2" size={24} color={colors.primaryLight} />
-                <Text style={[styles.drawerMenuItemText, { color: colors.text, fontFamily: Fonts.medium }]}>
-                  Manage Dealers
-                </Text>
-              </TouchableOpacity>
-            </>
-          )}
-
-          {currentUser && currentUser.role === 'stalkist' && (
-            <>
-              <TouchableOpacity
-                style={[styles.drawerMenuItem, { borderBottomColor: colors.border }]}
-                onPress={() => {
-                  setDrawerOpen(false);
-                  router.push('/manage-dealers');
-                }}
-              >
-                <IconSymbol name="person.2" size={24} color={colors.primaryLight} />
-                <Text style={[styles.drawerMenuItemText, { color: colors.text, fontFamily: Fonts.medium }]}>
-                  Manage Dealers
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.drawerMenuItem, { borderBottomColor: colors.border }]}
-                onPress={() => {
-                  setDrawerOpen(false);
-                  router.push('/dealer-requests');
-                }}
-              >
-                <IconSymbol name="list.bullet.rectangle.portrait" size={24} color={colors.primaryLight} />
-                <Text style={[styles.drawerMenuItemText, { color: colors.text, fontFamily: Fonts.medium }]}>
-                  Dealer Requests
-                </Text>
-              </TouchableOpacity>
-            </>
-          )}
-
-          {(currentUser?.role === 'dealer' || currentUser?.role === 'dellear') && (
-            <>
-              <TouchableOpacity
-                style={[styles.drawerMenuItem, { borderBottomColor: colors.border }]}
-                onPress={() => {
-                  setDrawerOpen(false);
-                  router.push('/dealer-dashboard');
-                }}
-              >
-                <IconSymbol name="cart" size={24} color={colors.primaryLight} />
-                <Text style={[styles.drawerMenuItemText, { color: colors.text, fontFamily: Fonts.medium }]}>
-                  Dealer Dashboard
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.drawerMenuItem, { borderBottomColor: colors.border }]}
-                onPress={() => {
-                  setDrawerOpen(false);
-                  router.push('/manage-salesmen');
-                }}
-              >
-                <IconSymbol name="person.2" size={24} color={colors.primaryLight} />
-                <Text style={[styles.drawerMenuItemText, { color: colors.text, fontFamily: Fonts.medium }]}>
-                  Manage Salesmen
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.drawerMenuItem, { borderBottomColor: colors.border }]}
-                onPress={() => {
-                  setDrawerOpen(false);
-                  router.push('/distribute-stock');
-                }}
-              >
-                <IconSymbol name="square.and.arrow.up" size={24} color={colors.primaryLight} />
-                <Text style={[styles.drawerMenuItemText, { color: colors.text, fontFamily: Fonts.medium }]}>
-                  Distribute Stock
-                </Text>
-              </TouchableOpacity>
-            </>
-          )}
-
-          {currentUser && currentUser.role === 'salesman' && (
-            <>
-              <TouchableOpacity
-                style={[styles.drawerMenuItem, { borderBottomColor: colors.border }]}
-                onPress={() => {
-                  setDrawerOpen(false);
-                  router.push('/my-stock');
-                }}
-              >
-                <IconSymbol name="cube" size={24} color={colors.primaryLight} />
-                <Text style={[styles.drawerMenuItemText, { color: colors.text, fontFamily: Fonts.medium }]}>
-                  My Stock
-                </Text>
-              </TouchableOpacity>
-            </>
-          )}
-
-          {!currentUser && (
-            <TouchableOpacity
-              style={[styles.drawerMenuItem, { borderBottomColor: colors.border }]}
-              onPress={() => {
-                setDrawerOpen(false);
-                router.push('/login');
-              }}
-            >
-              <IconSymbol name="person.fill" size={24} color={colors.primaryLight} />
-              <Text style={[styles.drawerMenuItemText, { color: colors.text, fontFamily: Fonts.medium }]}>
-                Login
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          {currentUser && (
-            <TouchableOpacity
-              style={[styles.drawerMenuItem, { borderBottomColor: colors.border }]}
-              onPress={handleLogout}
-            >
-              <IconSymbol name="arrow.right.square" size={24} color={colors.error} />
-              <Text style={[styles.drawerMenuItemText, { color: colors.error, fontFamily: Fonts.medium }]}>
-                Logout
-              </Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-    );
-  };
-
   return (
-    <Drawer
-      ref={drawerRef}
-      open={drawerOpen}
-      onOpen={() => setDrawerOpen(true)}
-      onClose={() => setDrawerOpen(false)}
-      drawerType="front"
-      renderDrawerContent={renderDrawerContent}
-      drawerStyle={[styles.drawer, { backgroundColor: colors.background }]}
-    >
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-          <TouchableOpacity
-            onPress={() => setDrawerOpen(true)}
-            style={styles.menuButton}
-          >
-            <IconSymbol name="line.3.horizontal" size={28} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: colors.text, fontFamily: Fonts.bold }]}>
-            Dashboard
-          </Text>
-        </View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <HeaderWithMenu title={t('dashboard.dashboard')} />
 
         <ScrollView style={[styles.content, { backgroundColor: colors.background }]} contentContainerStyle={styles.contentContainer}>
           {currentUser ? (
             <View style={styles.userInfoContainer}>
               <View style={[styles.userCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
                 <Text style={[styles.welcomeText, { color: colors.textSecondary, fontFamily: Fonts.light }]}>
-                  Welcome back,
+                  {t('dashboard.welcomeBack')}
                 </Text>
                 <Text style={[styles.userName, { color: colors.text, fontFamily: Fonts.bold }]}>{currentUser.name}</Text>
                 <Text style={[styles.userEmail, { color: colors.textSecondary, fontFamily: Fonts.light }]}>{currentUser.email}</Text>
@@ -390,7 +116,7 @@ export default function HomeScreen() {
               {currentUser.role === 'admin' && (
                 <View style={styles.widgetsContainer}>
                   <Text style={[styles.widgetsTitle, { color: colors.text, fontFamily: Fonts.bold }]}>
-                    User Statistics
+                    {t('dashboard.userStatistics')}
                   </Text>
                   
                   {loadingCounts ? (
@@ -482,14 +208,14 @@ export default function HomeScreen() {
               {currentUser.role === 'admin' && (
                 <View style={styles.chartsContainer}>
                   <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: Fonts.bold }]}>
-                    Analytics & Insights
+                    {t('dashboard.analyticsInsights')}
                   </Text>
 
                   {loadingStats ? (
                     <View style={styles.loadingContainer}>
                       <ActivityIndicator size="small" color={colors.primaryLight} />
                       <Text style={[styles.loadingText, { color: colors.textSecondary, fontFamily: Fonts.light }]}>
-                        Loading statistics...
+                        {t('dashboard.loadingStatistics')}
                       </Text>
                     </View>
                   ) : statisticsData && userCounts ? (
@@ -603,8 +329,7 @@ export default function HomeScreen() {
             </View>
           )}
         </ScrollView>
-      </View>
-    </Drawer>
+    </View>
   );
 }
 
@@ -747,55 +472,6 @@ const styles = StyleSheet.create({
   widgetCount: {
     fontSize: Fonts.sizes['2xl'],
     lineHeight: 32,
-  },
-  drawer: {
-    width: 280,
-  },
-  drawerContent: {
-    flex: 1,
-    paddingTop: 60,
-  },
-  drawerHeader: {
-    padding: 20,
-    borderBottomWidth: 1,
-    marginBottom: 16,
-  },
-  drawerTitle: {
-    fontSize: Fonts.sizes['2xl'],
-    marginBottom: 16,
-  },
-  drawerUserInfo: {
-    gap: 8,
-  },
-  drawerUserName: {
-    fontSize: Fonts.sizes.lg,
-  },
-  drawerUserEmail: {
-    fontSize: Fonts.sizes.sm,
-  },
-  drawerRoleBadge: {
-    marginTop: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-  },
-  drawerRoleText: {
-    fontSize: Fonts.sizes.xs,
-    letterSpacing: Fonts.letterSpacing.wider,
-  },
-  drawerMenu: {
-    paddingTop: 8,
-  },
-  drawerMenuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    gap: 12,
-  },
-  drawerMenuItemText: {
-    fontSize: Fonts.sizes.base,
   },
   chartsContainer: {
     marginTop: 24,

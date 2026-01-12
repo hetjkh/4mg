@@ -4,12 +4,15 @@ import { Link, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { login } from '@/services/authService';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { Colors, Fonts } from '@/constants/theme';
 
 type UserRole = 'admin' | 'stalkist' | 'dellear' | 'salesman';
 
 export default function LoginScreen() {
   const { isDark, colorScheme } = useTheme();
+  const { t } = useLanguage();
   const colors = Colors[colorScheme];
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -66,6 +69,11 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.contentWrapper}>
+          {/* Language Switcher */}
+          <View style={styles.languageSwitcherContainer}>
+            <LanguageSwitcher />
+          </View>
+
           {/* Header */}
           <View style={styles.header}>
             <Text style={[styles.title, { color: colors.text, fontFamily: Fonts.bold }]}>
@@ -262,6 +270,10 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 448,
     alignSelf: 'center',
+  },
+  languageSwitcherContainer: {
+    alignItems: 'flex-end',
+    marginBottom: 16,
   },
   header: {
     marginBottom: 32,

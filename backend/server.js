@@ -50,6 +50,8 @@ app.use('/api/admin/dealers', require('./routes/adminDealers'));
 app.use('/api/admin/users', require('./routes/adminUsers'));
 app.use('/api/stalkists', require('./routes/stalkists'));
 app.use('/api/stock-allocation', require('./routes/stockAllocation'));
+app.use('/api/locations', require('./routes/locations'));
+app.use('/api/location-allocation', require('./routes/locationAllocation'));
 
 // Health check
 app.get('/api/health', (req, res) => {

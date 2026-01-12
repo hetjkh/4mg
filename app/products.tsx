@@ -8,6 +8,8 @@ import { getUser, User } from '@/services/authService';
 import { uploadImage } from '@/services/uploadService';
 import { useTheme } from '@/contexts/ThemeContext';
 import { Colors, Fonts } from '@/constants/theme';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { HeaderWithMenu } from '@/components/HeaderWithMenu';
 
 export default function ProductsScreen() {
   const { isDark, colorScheme } = useTheme();
@@ -22,6 +24,8 @@ export default function ProductsScreen() {
   // Form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [titleGu, setTitleGu] = useState('');
+  const [descriptionGu, setDescriptionGu] = useState('');
   const [packetPrice, setPacketPrice] = useState('');
   const [packetsPerStrip, setPacketsPerStrip] = useState('');
   const [image, setImage] = useState('');
@@ -110,6 +114,8 @@ export default function ProductsScreen() {
   const resetForm = () => {
     setTitle('');
     setDescription('');
+    setTitleGu('');
+    setDescriptionGu('');
     setPacketPrice('');
     setPacketsPerStrip('');
     setImage('');
@@ -123,6 +129,8 @@ export default function ProductsScreen() {
     setEditingProductId(product.id);
     setTitle(product.title);
     setDescription(product.description || '');
+    setTitleGu(''); // Gujarati data not available in response (will be empty initially)
+    setDescriptionGu(''); // Gujarati data not available in response (will be empty initially)
     setPacketPrice(product.packetPrice.toString());
     setPacketsPerStrip(product.packetsPerStrip.toString());
     setImage(product.image);
@@ -176,7 +184,9 @@ export default function ProductsScreen() {
           packetPriceNum,
           packetsPerStripNum,
           image.trim(),
-          stockNum
+          stockNum,
+          titleGu.trim() || undefined,
+          descriptionGu.trim() || undefined
         );
         Alert.alert('Success', 'Product updated successfully!', [
           {
@@ -190,7 +200,16 @@ export default function ProductsScreen() {
         ]);
       } else {
         // Create new product
-        await createProduct(title.trim(), description.trim(), packetPriceNum, packetsPerStripNum, image.trim(), stockNum);
+        await createProduct(
+          title.trim(),
+          description.trim(),
+          packetPriceNum,
+          packetsPerStripNum,
+          image.trim(),
+          stockNum,
+          titleGu.trim() || undefined,
+          descriptionGu.trim() || undefined
+        );
         Alert.alert('Success', 'Product created successfully!', [
           {
             text: 'OK',
@@ -238,7 +257,9 @@ export default function ProductsScreen() {
         editingStockProduct.packetPrice,
         editingStockProduct.packetsPerStrip,
         editingStockProduct.image,
-        stockNum
+        stockNum,
+        undefined, // titleGu - not updating, keep existing
+        undefined  // descriptionGu - not updating, keep existing
       );
       Alert.alert('Success', 'Stock updated successfully!');
       setShowStockModal(false);
@@ -293,24 +314,23 @@ export default function ProductsScreen() {
       <StatusBar style={isDark ? 'light' : 'dark'} />
       
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.background, borderBottomColor: colors.border }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={[styles.backButtonText, { color: colors.primaryLight, fontFamily: Fonts.semiBold }]}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text, fontFamily: Fonts.bold }]}>Products</Text>
-        <TouchableOpacity
-          onPress={() => {
-            if (showForm) {
-              handleCancel();
-            } else {
-              setShowForm(true);
-            }
-          }}
-          style={[styles.addButton, { backgroundColor: colors.primary }]}
-        >
-          <Text style={[styles.addButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>{showForm ? 'Cancel' : '+ Add'}</Text>
-        </TouchableOpacity>
-      </View>
+      <HeaderWithMenu
+        title="Products"
+        rightButton={
+          <TouchableOpacity
+            onPress={() => {
+              if (showForm) {
+                handleCancel();
+              } else {
+                setShowForm(true);
+              }
+            }}
+            style={[styles.addButton, { backgroundColor: colors.primary }]}
+          >
+            <Text style={[styles.addButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>{showForm ? 'Cancel' : '+ Add'}</Text>
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView style={[styles.scrollView, { backgroundColor: colors.background }]} contentContainerStyle={styles.scrollContent}>
         {/* Add/Edit Product Form */}
@@ -358,6 +378,45 @@ export default function ProductsScreen() {
               placeholderTextColor={colors.inputPlaceholder}
               value={description}
               onChangeText={(text) => { setDescription(text); setError(''); }}
+              multiline
+              numberOfLines={3}
+              editable={!submitting}
+            />
+
+            {/* Gujarati Title */}
+            <TextInput
+              style={[
+                styles.input,
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.inputBorder,
+                  color: colors.inputText,
+                  fontFamily: Fonts.regular,
+                },
+              ]}
+              placeholder="Product Title (Gujarati) - Optional"
+              placeholderTextColor={colors.inputPlaceholder}
+              value={titleGu}
+              onChangeText={(text) => { setTitleGu(text); setError(''); }}
+              editable={!submitting}
+            />
+
+            {/* Gujarati Description */}
+            <TextInput
+              style={[
+                styles.input,
+                styles.textArea,
+                {
+                  backgroundColor: colors.inputBackground,
+                  borderColor: colors.inputBorder,
+                  color: colors.inputText,
+                  fontFamily: Fonts.regular,
+                },
+              ]}
+              placeholder="Description (Gujarati) - Optional"
+              placeholderTextColor={colors.inputPlaceholder}
+              value={descriptionGu}
+              onChangeText={(text) => { setDescriptionGu(text); setError(''); }}
               multiline
               numberOfLines={3}
               editable={!submitting}
@@ -496,72 +555,109 @@ export default function ProductsScreen() {
 
         {/* Products List */}
         <View style={styles.productsContainer}>
-          <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: Fonts.bold }]}>
-            All Products ({products.length})
-          </Text>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: colors.text, fontFamily: Fonts.bold }]}>
+              All Products
+            </Text>
+            <View style={[styles.countBadge, { backgroundColor: colors.primary + '20' }]}>
+              <Text style={[styles.countText, { color: colors.primary, fontFamily: Fonts.semiBold }]}>
+                {products.length}
+              </Text>
+            </View>
+          </View>
 
           {products.length === 0 ? (
             <View style={styles.emptyContainer}>
+              <Text style={[styles.emptyIcon, { color: colors.textTertiary }]}>📦</Text>
               <Text style={[styles.emptyText, { color: colors.textTertiary, fontFamily: Fonts.light }]}>
-                No products yet. Add your first product!
+                No products yet.{'\n'}Add your first product!
               </Text>
             </View>
           ) : (
             products.map((product) => (
               <View key={product.id} style={[styles.productCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}>
-                {product.image ? (
-                  <Image source={{ uri: product.image }} style={styles.productImage} />
-                ) : (
-                  <View style={[styles.productImagePlaceholder, { backgroundColor: colors.inputBackground }]}>
-                    <Text style={[styles.placeholderText, { color: colors.textTertiary, fontFamily: Fonts.light }]}>No Image</Text>
-                  </View>
-                )}
+                {/* Product Image */}
+                <View style={styles.imageContainer}>
+                  {product.image ? (
+                    <Image source={{ uri: product.image }} style={styles.productImage} resizeMode="cover" />
+                  ) : (
+                    <View style={[styles.productImagePlaceholder, { backgroundColor: colors.inputBackground }]}>
+                      <Text style={[styles.placeholderIcon, { color: colors.textTertiary }]}>📷</Text>
+                      <Text style={[styles.placeholderText, { color: colors.textTertiary, fontFamily: Fonts.light }]}>No Image</Text>
+                    </View>
+                  )}
+                </View>
                 
+                {/* Product Info */}
                 <View style={styles.productInfo}>
-                  <Text style={[styles.productTitle, { color: colors.text, fontFamily: Fonts.bold }]}>{product.title}</Text>
+                  <View style={styles.productHeader}>
+                    <Text 
+                      style={[styles.productTitle, { color: colors.text, fontFamily: Fonts.bold }]} 
+                      numberOfLines={2}
+                      ellipsizeMode="tail"
+                    >
+                      {product.title}
+                    </Text>
+                  </View>
+                  
                   {product.description ? (
-                    <Text style={[styles.productDescription, { color: colors.textSecondary, fontFamily: Fonts.light }]} numberOfLines={2}>
+                    <Text 
+                      style={[styles.productDescription, { color: colors.textSecondary, fontFamily: Fonts.light }]} 
+                      numberOfLines={2}
+                      ellipsizeMode="tail"
+                    >
                       {product.description}
                     </Text>
                   ) : null}
                   
-                  <View style={styles.productDetails}>
-                    <View style={styles.detailItem}>
-                      <Text style={[styles.detailLabel, { color: colors.textSecondary, fontFamily: Fonts.light }]}>Packet Price:</Text>
-                      <Text style={[styles.detailValue, { color: colors.text, fontFamily: Fonts.semiBold }]}>₹{product.packetPrice.toFixed(2)}</Text>
-                    </View>
-                    <View style={styles.detailItem}>
-                      <Text style={[styles.detailLabel, { color: colors.textSecondary, fontFamily: Fonts.light }]}>Per Strip:</Text>
-                      <Text style={[styles.detailValue, { color: colors.text, fontFamily: Fonts.semiBold }]}>{product.packetsPerStrip} packets</Text>
-                    </View>
-                    <View style={styles.detailItem}>
-                      <Text style={[styles.detailLabel, { color: colors.textSecondary, fontFamily: Fonts.light }]}>Stock:</Text>
-                      <Text style={[styles.detailValue, { color: product.stock > 0 ? colors.success : colors.error, fontFamily: Fonts.semiBold }]}>
-                        {product.stock} strips
+                  {/* Product Details Grid */}
+                  <View style={styles.productDetailsGrid}>
+                    <View style={[styles.detailCard, { backgroundColor: colors.background }]}>
+                      <Text style={[styles.detailLabel, { color: colors.textTertiary, fontFamily: Fonts.light }]}>Price</Text>
+                      <Text style={[styles.detailValue, { color: colors.text, fontFamily: Fonts.bold }]}>
+                        ₹{product.packetPrice.toFixed(2)}
                       </Text>
+                      <Text style={[styles.detailSubtext, { color: colors.textSecondary, fontFamily: Fonts.light }]}>per packet</Text>
+                    </View>
+                    
+                    <View style={[styles.detailCard, { backgroundColor: colors.background }]}>
+                      <Text style={[styles.detailLabel, { color: colors.textTertiary, fontFamily: Fonts.light }]}>Per Strip</Text>
+                      <Text style={[styles.detailValue, { color: colors.text, fontFamily: Fonts.bold }]}>
+                        {product.packetsPerStrip}
+                      </Text>
+                      <Text style={[styles.detailSubtext, { color: colors.textSecondary, fontFamily: Fonts.light }]}>packets</Text>
+                    </View>
+                    
+                    <View style={[styles.detailCard, { backgroundColor: colors.background }]}>
+                      <Text style={[styles.detailLabel, { color: colors.textTertiary, fontFamily: Fonts.light }]}>Stock</Text>
+                      <Text style={[styles.detailValue, { color: colors.text, fontFamily: Fonts.bold }]}>
+                        {product.stock}
+                      </Text>
+                      <Text style={[styles.detailSubtext, { color: colors.textSecondary, fontFamily: Fonts.light }]}>strips</Text>
                     </View>
                   </View>
 
+                  {/* Action Buttons */}
                   <View style={styles.productActions}>
                     <TouchableOpacity
-                      style={[styles.editButton, { backgroundColor: colors.info }]}
+                      style={[styles.actionButton, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}
                       onPress={() => handleEdit(product)}
                     >
-                      <Text style={[styles.editButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>Edit</Text>
+                      <IconSymbol name="pencil" size={20} color={colors.primary} />
                     </TouchableOpacity>
                     
                     <TouchableOpacity
-                      style={[styles.stockButton, { backgroundColor: colors.success }]}
+                      style={[styles.actionButton, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}
                       onPress={() => handleQuickStockUpdate(product)}
                     >
-                      <Text style={[styles.stockButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>Stock</Text>
+                      <IconSymbol name="cube" size={20} color={colors.primary} />
                     </TouchableOpacity>
                     
                     <TouchableOpacity
-                      style={[styles.deleteButton, { backgroundColor: colors.error }]}
+                      style={[styles.actionButton, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}
                       onPress={() => handleDelete(product.id, product.title)}
                     >
-                      <Text style={[styles.deleteButtonText, { color: colors.textInverse, fontFamily: Fonts.semiBold }]}>Delete</Text>
+                      <IconSymbol name="trash" size={20} color={colors.primary} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -682,9 +778,15 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   formContainer: {
-    padding: 16,
-    borderRadius: 12,
+    padding: 20,
+    borderRadius: 16,
     marginBottom: 24,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   formTitle: {
     fontSize: Fonts.sizes.xl,
@@ -749,15 +851,17 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
     fontSize: Fonts.sizes.base,
-    marginBottom: 12,
+    marginBottom: 16,
+    minHeight: 48,
   },
   textArea: {
-    minHeight: 80,
+    minHeight: 100,
     textAlignVertical: 'top',
+    paddingTop: 14,
   },
   row: {
     flexDirection: 'row',
@@ -767,17 +871,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   submitButton: {
-    paddingVertical: 14,
-    borderRadius: 8,
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 8,
-    backgroundColor: '#3B82F6',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   submitButtonText: {
-    color: '#1D1D1D',
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
+    fontSize: Fonts.sizes.base,
+    fontFamily: Fonts.semiBold,
   },
   errorContainer: {
     padding: 12,
@@ -794,95 +901,134 @@ const styles = StyleSheet.create({
   productsContainer: {
     gap: 16,
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
   sectionTitle: {
-    fontSize: Fonts.sizes.lg,
-    marginBottom: 12,
+    fontSize: Fonts.sizes.xl,
+  },
+  countBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  countText: {
+    fontSize: Fonts.sizes.base,
   },
   emptyContainer: {
-    padding: 32,
+    padding: 48,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 16,
   },
   emptyText: {
     fontSize: Fonts.sizes.base,
     textAlign: 'center',
+    lineHeight: 22,
   },
   productCard: {
     flexDirection: 'row',
-    padding: 12,
-    borderRadius: 12,
+    padding: 16,
+    borderRadius: 16,
     borderWidth: 1,
-    gap: 12,
+    gap: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  imageContainer: {
+    width: 120,
+    height: 120,
+    flexShrink: 0,
   },
   productImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 8,
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
     backgroundColor: '#D1D5DB',
   },
   productImagePlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 8,
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderStyle: 'dashed',
+  },
+  placeholderIcon: {
+    fontSize: 32,
+    marginBottom: 4,
   },
   placeholderText: {
     fontSize: Fonts.sizes.xs,
   },
   productInfo: {
     flex: 1,
-    gap: 8,
+    minWidth: 0, // Prevents overflow
+    flexShrink: 1,
+  },
+  productHeader: {
+    marginBottom: 8,
   },
   productTitle: {
     fontSize: Fonts.sizes.lg,
+    lineHeight: 24,
+    marginBottom: 4,
   },
   productDescription: {
     fontSize: Fonts.sizes.sm,
+    lineHeight: 18,
+    marginBottom: 12,
   },
-  productDetails: {
+  productDetailsGrid: {
     flexDirection: 'row',
-    gap: 16,
-    marginTop: 4,
+    gap: 8,
+    marginBottom: 12,
+    flexWrap: 'wrap',
   },
-  detailItem: {
-    flexDirection: 'row',
-    gap: 4,
+  detailCard: {
+    flex: 1,
+    minWidth: 80,
+    padding: 10,
+    borderRadius: 10,
+    alignItems: 'center',
   },
   detailLabel: {
-    fontSize: Fonts.sizes.sm,
+    fontSize: Fonts.sizes.xs,
+    marginBottom: 4,
   },
   detailValue: {
-    fontSize: Fonts.sizes.sm,
+    fontSize: Fonts.sizes.base,
+    marginBottom: 2,
+  },
+  detailSubtext: {
+    fontSize: Fonts.sizes.xs,
   },
   productActions: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 8,
-    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    flexWrap: 'nowrap',
+    marginTop: 4,
   },
-  editButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-  },
-  editButtonText: {
-    fontSize: Fonts.sizes.sm,
-  },
-  stockButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-  },
-  stockButtonText: {
-    fontSize: Fonts.sizes.sm,
-  },
-  deleteButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-  },
-  deleteButtonText: {
-    fontSize: Fonts.sizes.sm,
+  actionButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    flexShrink: 0,
   },
   modalOverlay: {
     flex: 1,

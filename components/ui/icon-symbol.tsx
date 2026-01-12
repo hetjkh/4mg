@@ -30,6 +30,12 @@ const MAPPING = {
   'person.3': 'groups',
   'person.2': 'people',
   'cart': 'shopping-cart',
+  'pencil': 'edit',
+  'trash': 'delete',
+  'map': 'map',
+  'moon.fill': 'dark-mode',
+  'sun.max.fill': 'light-mode',
+  'globe': 'language',
 } as IconMapping;
 
 /**

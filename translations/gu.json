@@ -1,0 +1,93 @@
+{
+  "common": {
+    "ok": "ઠીક છે",
+    "cancel": "રદ કરો",
+    "back": "પાછળ",
+    "save": "સાચવો",
+    "delete": "કાઢી નાખો",
+    "edit": "સંપાદિત કરો",
+    "loading": "લોડ થઈ રહ્યું છે...",
+    "error": "ત્રુટિ",
+    "success": "સફળતા",
+    "submit": "સબમિટ કરો",
+    "search": "શોધો",
+    "filter": "ફિલ્ટર કરો",
+    "selectLanguage": "ભાષા પસંદ કરો"
+  },
+  "auth": {
+    "welcomeBack": "પાછા આવો",
+    "signInToContinue": "ચાલુ રાખવા માટે સાઇન ઇન કરો",
+    "email": "ઇમેઇલ",
+    "password": "પાસવર્ડ",
+    "confirmPassword": "પાસવર્ડ પુષ્ટિ કરો",
+    "fullName": "પૂર્ણ નામ",
+    "role": "ભૂમિકા",
+    "login": "લોગિન",
+    "register": "નોંધણી કરો",
+    "loginSuccess": "લોગિન સફળ!",
+    "loginFailed": "લોગિન નિષ્ફળ. કૃપા કરીને ફરી પ્રયાસ કરો.",
+    "registrationSuccess": "વપરાશકર્તા સફળતાપૂર્વક નોંધાયો!",
+    "registrationFailed": "નોંધણી નિષ્ફળ. કૃપા કરીને ફરી પ્રયાસ કરો.",
+    "fillAllFields": "કૃપા કરીને બધા ક્ષેત્રો ભરો",
+    "passwordMinLength": "પાસવર્ડ ઓછામાં ઓછા 6 અક્ષરોનો હોવો જોઈએ",
+    "passwordsNotMatch": "પાસવર્ડ મેળ ખાતા નથી",
+    "enterEmail": "ઇમેઇલ દાખલ કરો",
+    "enterPassword": "પાસવર્ડ દાખલ કરો",
+    "enterFullName": "પૂર્ણ નામ દાખલ કરો",
+    "createPassword": "પાસવર્ડ બનાવો",
+    "confirmPasswordPlaceholder": "પાસવર્ડ પુષ્ટિ કરો",
+    "selectRole": "ભૂમિકા પસંદ કરો"
+  },
+  "roles": {
+    "admin": "એડમિન",
+    "stalkist": "સ્ટૉકિસ્ટ",
+    "dellear": "ડીલર",
+    "salesman": "વેચાણકર્તા"
+  },
+  "register": {
+    "title": "નવો વપરાશકર્તા નોંધો",
+    "subtitleAdmin": "એડમિન - કોઈપણ ભૂમિકા સાથે વપરાશકર્તા એકાઉન્ટ બનાવો",
+    "subtitleStalkist": "સ્ટૉકિસ્ટ - ડીલર એકાઉન્ટ બનાવો",
+    "subtitleDellear": "ડીલર - વેચાણકર્તા એકાઉન્ટ બનાવો",
+    "subtitleDefault": "વપરાશકર્તા એકાઉન્ટ બનાવો",
+    "registerUser": "વપરાશકર્તા નોંધો",
+    "backToDashboard": "ડેશબોર્ડ પર પાછા",
+    "failedToLoadRoles": "અનુમતિ પ્રાપ્ત ભૂમિકાઓ લોડ કરવામાં નિષ્ફળ. કૃપા કરીને ફરી પ્રયાસ કરો.",
+    "failedToFetchData": "ડેટા મેળવવામાં નિષ્ફળ"
+  },
+  "errors": {
+    "networkError": "સર્વર સાથે જોડાઈ શકાતું નથી. કૃપા કરીને તમારું કનેક્શન તપાસો.",
+    "accessDenied": "ઍક્સેસ નકારવામાં આવી",
+    "genericError": "કંઈક ખોટું થયું. કૃપા કરીને ફરી પ્રયાસ કરો."
+  },
+  "dashboard": {
+    "menu": "મેનુ",
+    "dashboard": "ડેશબોર્ડ",
+    "welcomeBack": "પાછા આવો,",
+    "userStatistics": "વપરાશકર્તા આંકડાઓ",
+    "analyticsInsights": "વિશ્લેષણ અને આંતરદૃષ્ટિ",
+    "userGrowth": "વપરાશકર્તા વૃદ્ધિ (છેલ્લા 7 દિવસ)",
+    "userDistribution": "વપરાશકર્તા વિતરણ",
+    "roleDistribution": "ભૂમિકા વિતરણ",
+    "totalUsers": "કુલ વપરાશકર્તાઓ",
+    "loadingStatistics": "આંકડાઓ લોડ થઈ રહ્યા છે..."
+  },
+  "sidebar": {
+    "lightMode": "લાઇટ મોડ",
+    "darkMode": "ડાર્ક મોડ",
+    "registerUser": "વપરાશકર્તા નોંધો",
+    "products": "ઉત્પાદનો",
+    "dealerRequests": "ડીલર અરજીઓ",
+    "manageStalkists": "સ્ટૉકિસ્ટ મેનેજ કરો",
+    "manageDealers": "ડીલર મેનેજ કરો",
+    "dealerDashboard": "ડીલર ડેશબોર્ડ",
+    "manageSalesmen": "વેચાણકર્તાઓ મેનેજ કરો",
+    "distributeStock": "સ્ટૉક વિતરણ કરો",
+    "myStock": "મારો સ્ટૉક",
+    "login": "લોગિન",
+    "logout": "લૉગઆઉટ",
+    "logoutConfirm": "શું તમે લૉગઆઉટ કરવા માંગો છો?",
+    "logoutSuccess": "સફળતાપૂર્વક લૉગઆઉટ"
+  }
+}
+

@@ -2,14 +2,12 @@ const mongoose = require('mongoose');
 
 const productSchema = new mongoose.Schema({
   title: {
-    type: String,
-    required: [true, 'Product title is required'],
-    trim: true,
+    en: { type: String, required: true, trim: true },
+    gu: { type: String, trim: true },
   },
   description: {
-    type: String,
-    trim: true,
-    default: '',
+    en: { type: String, trim: true, default: '' },
+    gu: { type: String, trim: true, default: '' },
   },
   packetPrice: {
     type: Number,

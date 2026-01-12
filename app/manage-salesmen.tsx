@@ -5,6 +5,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { getSalesmen, updateSalesman, deleteSalesman, Salesman } from '@/services/salesmanService';
 import { getUser, User } from '@/services/authService';
+import { HeaderWithMenu } from '@/components/HeaderWithMenu';
 
 export default function ManageSalesmenScreen() {
   const [salesmen, setSalesmen] = useState<Salesman[]>([]);
@@ -172,20 +173,19 @@ export default function ManageSalesmenScreen() {
       <StatusBar style="light" />
       
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Manage Salesmen</Text>
-        <TouchableOpacity
-          onPress={() => {
-            router.push('/admin-register');
-          }}
-          style={styles.addButton}
-        >
-          <Text style={styles.addButtonText}>+ Add</Text>
-        </TouchableOpacity>
-      </View>
+      <HeaderWithMenu
+        title="Manage Salesmen"
+        rightButton={
+          <TouchableOpacity
+            onPress={() => {
+              router.push('/admin-register');
+            }}
+            style={styles.addButton}
+          >
+            <Text style={styles.addButtonText}>+ Add</Text>
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Salesmen List */}
@@ -219,6 +219,13 @@ export default function ManageSalesmenScreen() {
                 </View>
 
                 <View style={styles.salesmanActions}>
+                  <TouchableOpacity
+                    style={styles.allocateButton}
+                    onPress={() => router.push(`/allocate-location-to-salesman?salesmanId=${salesman.id}&salesmanName=${encodeURIComponent(salesman.name)}`)}
+                  >
+                    <Text style={styles.allocateButtonText}>Allocate Location</Text>
+                  </TouchableOpacity>
+                  
                   <TouchableOpacity
                     style={styles.editButton}
                     onPress={() => handleEdit(salesman)}
@@ -465,9 +472,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     marginTop: 8,
+    flexWrap: 'wrap',
+  },
+  allocateButton: {
+    flex: 1,
+    minWidth: '48%',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#3B82F6',
+    alignItems: 'center',
+  },
+  allocateButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontFamily: 'Poppins-SemiBold',
   },
   editButton: {
     flex: 1,
+    minWidth: '48%',
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
