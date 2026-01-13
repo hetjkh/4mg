@@ -1,0 +1,50 @@
+// Gradle init script to configure repositories with fallbacks
+allprojects {
+    buildscript {
+        repositories {
+            // Add public repositories first as fallbacks
+            mavenCentral()
+            google()
+            maven {
+                url "https://repo1.maven.org/maven2"
+            }
+            // JFrog public repositories as fallback
+            maven {
+                url "https://oss.jfrog.org/artifactory/oss-snapshot-local"
+            }
+            maven {
+                url "https://jfrog.io/artifactory/libs-release"
+            }
+        }
+    }
+    
+    repositories {
+        // Add public repositories first as fallbacks
+        mavenCentral()
+        google()
+        maven {
+            url "https://repo1.maven.org/maven2"
+        }
+        // JFrog public repositories as fallback
+        maven {
+            url "https://oss.jfrog.org/artifactory/oss-snapshot-local"
+        }
+        maven {
+            url "https://jfrog.io/artifactory/libs-release"
+        }
+    }
+}
+
+// Configure repository resolution to continue on failure
+gradle.settingsEvaluated { settings ->
+    settings.pluginManagement {
+        repositories {
+            mavenCentral()
+            google()
+            maven {
+                url "https://repo1.maven.org/maven2"
+            }
+        }
+    }
+}
+

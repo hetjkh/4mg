@@ -40,4 +40,9 @@ app-example
 
 # generated native folders
 /ios
-/android
+# Android: ignore everything except our custom Gradle config files
+/android/*
+!/android/build.gradle
+!/android/gradle.properties
+!/android/gradle
+!/android/gradle/init.gradle
